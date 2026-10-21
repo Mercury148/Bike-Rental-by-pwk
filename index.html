@@ -1,0 +1,884 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>[hidden]{display:none!important}img{max-width:100%}</style>
+</head>
+<body>
+<title>Fahrradverleih</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: Galerie wie ein Produktkatalog — große Bildflächen, schwarze Schrift, viel Weiß; Leiste unten wie im Mondbuch. */
+:root {
+  color-scheme: light;
+  --paper: #ffffff;      /* Grundfläche */
+  --stone: #f3f3f1;      /* Bildflächen, ruhige Flächen */
+  --rule: #e2e2de;       /* Haarlinien */
+  --ink: #0b0b0b;        /* Schrift, Buttons */
+  --ink-soft: #6b6b66;   /* Nebentexte */
+  --ok: #1f6b3a;         /* verfügbar */
+  --busy: #8a5a00;       /* verliehen */
+  --shop: #9b2d20;       /* Werkstatt */
+
+  --font-sans: "Hanken Grotesk", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+
+  --gutter-l: max(16px, env(safe-area-inset-left, 0px));
+  --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+  --tabbar: 4.25rem;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 15px/1.5 var(--font-sans);
+  padding-left: var(--gutter-l);
+  padding-right: var(--gutter-r);
+  padding-block: 0 calc(var(--tabbar) + 2rem + env(safe-area-inset-bottom, 0px));
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.wrap { max-width: 76rem; margin-inline: auto; }
+
+/* ---------- Kopf ---------- */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+  padding-block: 1.25rem; border-bottom: 1px solid var(--rule);
+}
+.brand { display: flex; align-items: baseline; gap: 0.9rem; flex-wrap: wrap; }
+.brand h1 { margin: 0; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; }
+.brand span { font-size: 0.8rem; color: var(--ink-soft); letter-spacing: 0.04em; }
+.mode { font-size: 0.75rem; color: var(--ink-soft); }
+
+.section-head { display: flex; align-items: end; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding-block: 2.25rem 1.25rem; }
+.section-head h2 { margin: 0; font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 300; letter-spacing: -0.02em; line-height: 1.05; text-wrap: balance; }
+.section-head p { margin: 0.35rem 0 0; color: var(--ink-soft); font-size: 0.9rem; }
+
+.note { margin: 1rem 0 0; padding: 0.7rem 0.9rem; background: var(--stone); font-size: 0.85rem; color: var(--ink-soft); }
+
+/* ---------- Buttons & Felder ---------- */
+.btn {
+  min-height: 44px; padding: 0.55rem 1.3rem;
+  background: var(--ink); color: var(--paper);
+  border: 1px solid var(--ink); border-radius: 0;
+  font-size: 0.8rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+}
+.btn.ghost { background: transparent; color: var(--ink); }
+.btn.danger { background: transparent; color: var(--shop); border-color: var(--shop); }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.link { background: none; border: 0; padding: 0.25rem 0; min-height: 44px; font-size: 0.85rem; text-decoration: underline; text-underline-offset: 3px; }
+
+label.f { display: grid; gap: 0.35rem; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); }
+input[type="search"], input[type="text"], input[type="number"], select, textarea {
+  width: 100%; min-height: 44px; padding: 0.55rem 0.75rem;
+  background: var(--paper); border: 1px solid var(--rule); border-radius: 0;
+  font-size: 0.95rem; letter-spacing: 0; text-transform: none; font-weight: 400; color: var(--ink);
+}
+input:focus, select:focus, textarea:focus { border-color: var(--ink); outline: none; }
+textarea { resize: vertical; min-height: 5rem; }
+
+/* ---------- Filter ---------- */
+.filters { display: grid; gap: 1rem; grid-template-columns: 1fr; padding-bottom: 1.5rem; border-bottom: 1px solid var(--rule); }
+@media (min-width: 46rem) { .filters { grid-template-columns: 2fr 1fr 1fr 1fr; align-items: end; } .filters .row { grid-column: 1 / -1; } }
+.row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.row .lbl { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); margin-right: 0.35rem; }
+.chip {
+  min-height: 38px; padding: 0.3rem 0.95rem;
+  background: var(--paper); color: var(--ink); border: 1px solid var(--rule); border-radius: 999px;
+  font-size: 0.85rem;
+}
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.meta { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding-block: 1rem; font-size: 0.85rem; color: var(--ink-soft); }
+
+/* ---------- Radkarten ---------- */
+.grid { display: grid; gap: 2.5rem 1.5rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 17.5rem), 1fr)); }
+.bike { display: grid; gap: 0.9rem; background: none; border: 0; padding: 0; text-align: left; color: var(--ink); }
+.bike:hover .pic svg, .bike:hover .pic img { transform: scale(1.025); }
+.pic { position: relative; aspect-ratio: 4 / 3; max-width: 100%; background: var(--stone); overflow: hidden; display: grid; place-items: center; }
+.pic svg { width: 82%; height: auto; color: var(--ink); transition: transform 0.4s ease; }
+.pic img { width: 100%; height: 100%; object-fit: contain; transition: transform 0.4s ease; }
+.status { position: absolute; top: 0.75rem; left: 0.75rem; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.2rem 0.6rem; background: var(--paper); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; }
+.status::before { content: ""; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: currentColor; }
+.status.verfügbar { color: var(--ok); }
+.status.verliehen { color: var(--busy); }
+.status.werkstatt { color: var(--shop); }
+.invno { position: absolute; top: 0.85rem; right: 0.85rem; font: 500 0.75rem var(--font-mono); color: var(--ink-soft); }
+
+.bike-head { display: grid; gap: 0.1rem; }
+.eyebrow { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-soft); }
+.bike-name { font-size: 1.25rem; font-weight: 500; letter-spacing: -0.01em; line-height: 1.2; }
+.specs { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: 0; border-top: 1px solid var(--rule); }
+.specs div { padding: 0.5rem 0; border-bottom: 1px solid var(--rule); min-width: 0; }
+.specs div:nth-child(odd):not(.full) { padding-right: 0.75rem; }
+.specs .full { grid-column: 1 / -1; }
+.specs dt { font-size: 0.66rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft); }
+.specs dd { margin: 0; font-size: 0.95rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+.empty { padding: 3rem 0; color: var(--ink-soft); max-width: 40ch; }
+
+/* ---------- Kundenkartei ---------- */
+.cust-tools { display: grid; gap: 1rem; grid-template-columns: 1fr; padding-bottom: 1.5rem; border-bottom: 1px solid var(--rule); }
+@media (min-width: 46rem) { .cust-tools { grid-template-columns: 2fr 1fr; align-items: end; } }
+.cust-list { list-style: none; margin: 0; padding: 0; }
+.cust { border-bottom: 1px solid var(--rule); }
+.cust button {
+  width: 100%; display: grid; gap: 0.25rem 1.5rem; align-items: baseline;
+  grid-template-columns: 1fr; padding: 1.1rem 0; background: none; border: 0; text-align: left; color: var(--ink);
+}
+@media (min-width: 40rem) { .cust button { grid-template-columns: 9rem 8rem 1fr auto; } }
+.cust .cid { font: 500 1.15rem var(--font-mono); letter-spacing: 0.04em; }
+.cust .muted { color: var(--ink-soft); font-size: 0.9rem; }
+.cust .rent { font-size: 0.9rem; min-width: 0; }
+.cust .rent.on { color: var(--busy); font-weight: 500; }
+
+/* ---------- Untere Leiste ---------- */
+.tabs {
+  position: fixed; inset: auto 0 0 0; z-index: 5;
+  display: flex; justify-content: center; gap: 0.5rem;
+  padding: 0.6rem var(--gutter-r) calc(0.6rem + env(safe-area-inset-bottom, 0px)) var(--gutter-l);
+  background: var(--paper); border-top: 1px solid var(--rule);
+}
+.tabs button {
+  flex: 1; max-width: 18rem; min-height: 46px;
+  background: none; border: 1px solid transparent; border-radius: 0;
+  font-size: 0.78rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft);
+}
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom: 2px solid var(--ink); }
+.badge { margin-left: 0.35rem; font: 500 0.75rem var(--font-mono); letter-spacing: 0; }
+
+/* ---------- Dialoge ---------- */
+dialog {
+  width: min(40rem, calc(100% - 2rem)); max-height: 88vh; padding: 0;
+  background: var(--paper); color: var(--ink); border: 0; border-radius: 0;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+}
+dialog::backdrop { background: rgba(20, 20, 18, 0.45); }
+.dlg { display: grid; gap: 1.25rem; padding: 1.5rem; }
+.dlg-head { display: flex; justify-content: space-between; align-items: start; gap: 1rem; }
+.dlg-head h3 { margin: 0; font-size: 1.6rem; font-weight: 300; letter-spacing: -0.015em; line-height: 1.15; }
+.close { background: none; border: 0; min-width: 44px; min-height: 44px; font-size: 1.5rem; line-height: 1; color: var(--ink); }
+.dlg .pic { aspect-ratio: 16 / 9; }
+.actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.actions .btn { flex: 1 1 10rem; }
+.form-grid { display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; }
+.form-grid .full { grid-column: 1 / -1; }
+@media (max-width: 30rem) { .form-grid { grid-template-columns: 1fr; } }
+.hint { margin: 0; color: var(--ink-soft); font-size: 0.85rem; }
+.bigid { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding: 1.5rem; background: var(--stone); }
+.bigid strong { font: 500 clamp(2rem, 8vw, 2.8rem) var(--font-mono); letter-spacing: 0.06em; }
+.rental-box { padding: 1rem; background: var(--stone); display: grid; gap: 0.75rem; }
+.rental-box p { margin: 0; }
+.match { font-size: 0.8rem; color: var(--ok); }
+.nomatch { font-size: 0.8rem; color: var(--busy); }
+
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%); z-index: 20;
+  bottom: calc(var(--tabbar) + 1rem + env(safe-area-inset-bottom, 0px));
+  width: max-content; max-width: calc(100% - 2rem); padding: 0.7rem 1.1rem;
+  background: var(--ink); color: var(--paper); font-size: 0.88rem; text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) { .pic svg, .pic img { transition: none; } }
+</style>
+
+<header class="wrap topbar">
+  <div class="brand">
+    <h1>Fahrradverleih</h1>
+    <span>Riese &amp; Müller Flotte</span>
+  </div>
+  <span id="mode" class="mode">Verbinde …</span>
+</header>
+
+<main class="wrap">
+  <!-- ===== Ansicht 1: Inventar ===== -->
+  <section id="view-inventar" aria-label="Inventar">
+    <div class="section-head">
+      <div>
+        <h2>Inventar</h2>
+        <p id="inv-sub">Alle Räder der Flotte mit den Daten, die für die Ausgabe zählen.</p>
+      </div>
+      <button id="add-bike" class="btn ghost" type="button" hidden>Rad hinzufügen</button>
+    </div>
+
+    <div class="filters">
+      <label class="f" for="q">Suche
+        <input id="q" type="search" placeholder="Modell, Inventarnr. oder Schaltung" autocomplete="off">
+      </label>
+      <label class="f" for="f-art">Bauart
+        <select id="f-art"></select>
+      </label>
+      <label class="f" for="f-hoehe">Körpergröße (cm)
+        <input id="f-hoehe" type="number" inputmode="numeric" min="120" max="220" placeholder="z. B. 178">
+      </label>
+      <label class="f" for="f-schaltung">Schaltung
+        <select id="f-schaltung"></select>
+      </label>
+      <div class="row" role="group" aria-label="Status">
+        <span class="lbl">Status</span>
+        <div id="status-chips" class="row"></div>
+      </div>
+    </div>
+    <div class="meta">
+      <span id="count" aria-live="polite"></span>
+      <button id="reset" class="link" type="button" hidden>Filter zurücksetzen</button>
+    </div>
+
+    <div id="grid" class="grid"></div>
+  </section>
+
+  <!-- ===== Ansicht 2: Kundenkartei ===== -->
+  <section id="view-kunden" aria-label="Kundenkartei" hidden>
+    <div class="section-head">
+      <div>
+        <h2>Kundenkartei</h2>
+        <p>Kunden werden nur über ihre Nummer geführt. Klarnamen gehören nicht ins System.</p>
+      </div>
+      <button id="new-cust" class="btn" type="button">Neuer Kunde</button>
+    </div>
+    <div class="cust-tools">
+      <label class="f" for="cq">Kundennummer suchen
+        <input id="cq" type="search" placeholder="z. B. K-48213" autocomplete="off">
+      </label>
+      <label class="f" for="c-sort">Sortierung
+        <select id="c-sort">
+          <option value="neu">Neueste zuerst</option>
+          <option value="id">Nach Nummer</option>
+          <option value="aktiv">Mit Rad zuerst</option>
+        </select>
+      </label>
+    </div>
+    <ul id="cust-list" class="cust-list"></ul>
+  </section>
+</main>
+
+<nav class="tabs" role="tablist" aria-label="Bereiche">
+  <button role="tab" data-tab="inventar" aria-selected="true" type="button">Inventar <span id="badge-inv" class="badge"></span></button>
+  <button role="tab" data-tab="kunden" aria-selected="false" type="button">Kundenkartei <span id="badge-cust" class="badge"></span></button>
+</nav>
+
+<dialog id="dlg" aria-label="Details"><div id="dlg-body"></div></dialog>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script>
+"use strict";
+
+/* ==========================================================
+   Fahrradverleih: Aufbau wie im Mondbuch.
+   1. Einstellungen   2. Zustand   3. Hilfsfunktionen
+   4. Speicher (gemeinsame Datenbank oder lokaler Browser)
+   5. Logik (Kunden-IDs, Verleih, Filter)
+   6. Anzeige          7. Start
+   ========================================================== */
+
+/* ---------- 1. Einstellungen ---------- */
+
+// Buchstaben für Kunden-IDs. I und O fehlen, damit niemand sie mit 1 und 0 verwechselt.
+const ID_LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+const ARTEN = ["Trekking", "Tiefeinsteiger", "Urban", "Lastenrad", "Longtail"];
+const STATI = [
+  { key: "verfügbar", label: "Verfügbar" },
+  { key: "verliehen", label: "Verliehen" },
+  { key: "werkstatt", label: "Werkstatt" },
+];
+const SCHALTUNGEN = ["enviolo (stufenlos)", "Rohloff E-14", "Shimano Nexus 5", "Shimano Deore 11-fach", "Pinion C1.12"];
+const LOCAL_KEY = "fahrradverleih-lokal-v1";
+
+// Nur für die lokale Vorschau außerhalb von Claude. In der veröffentlichten Seite kommen die Räder aus der Datenbank.
+const PREVIEW_BIKES = [
+  { id: "R-01", modell: "Nevo5 vario", art: "Tiefeinsteiger", rahmen: "47 cm", kMin: 160, kMax: 175, nm: 85, wh: 625, schaltung: "enviolo (stufenlos)", status: "verfügbar" },
+  { id: "R-02", modell: "Charger4 GT vario", art: "Trekking", rahmen: "53 cm", kMin: 175, kMax: 188, nm: 85, wh: 750, schaltung: "enviolo (stufenlos)", status: "verfügbar" },
+  { id: "R-03", modell: "Load4 75 vario", art: "Lastenrad", rahmen: "Einheitsgröße", kMin: 150, kMax: 195, nm: 85, wh: 800, schaltung: "enviolo (stufenlos)", status: "werkstatt" },
+];
+
+/* ---------- 2. Zustand ---------- */
+
+const state = {
+  mode: "loading",     // "live" = gemeinsame Datenbank, "local" = nur dieser Browser
+  bikes: [],
+  customers: [],
+  canWrite: true,
+  assets: null,
+};
+const filters = { q: "", art: "", hoehe: "", schaltung: "", status: new Set() };
+let db = null;
+
+/* ---------- 3. Hilfsfunktionen ---------- */
+
+const $ = (s) => document.querySelector(s);
+
+// Baut ein Element. Texte immer als textContent, nie als HTML.
+function el(tag, props = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (v == null || v === false) continue;
+    if (k === "class") node.className = v;
+    else if (k === "text") node.textContent = v;
+    else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
+    else node.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of children.flat()) if (c != null && c !== false) node.append(c);
+  return node;
+}
+
+let toastTimer;
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => (t.hidden = true), 2800);
+}
+
+const fmtDate = (iso) => { try { return new Date(iso).toLocaleDateString("de-DE"); } catch { return ""; } };
+const bikeName = (b) => b ? `${b.modell} · ${b.id}` : "";
+const fits = (b, h) => h && b.kMin && b.kMax ? h >= b.kMin && h <= b.kMax : null;
+
+// Strichzeichnung als Platzhalter, bis ein Foto hochgeladen ist.
+const SVG_NS = "http://www.w3.org/2000/svg";
+function bikeDrawing(art) {
+  const lines = {
+    rad: `<circle cx="50" cy="82" r="30"/><circle cx="150" cy="82" r="30"/>
+      <path d="M50 82 L96 84 L88 38 Z"/><path d="M96 84 L134 44"/><path d="M88 38 L134 44"/>
+      <path d="M134 44 L150 82"/><path d="M80 33 H98"/><path d="M134 44 L130 30 L143 28"/>
+      <path d="M100 74 L127 50" stroke-width="6"/><circle cx="96" cy="84" r="5"/>`,
+    tief: `<circle cx="50" cy="82" r="30"/><circle cx="150" cy="82" r="30"/>
+      <path d="M50 82 L96 84 L86 40"/><path d="M50 82 L86 40"/><path d="M96 84 Q110 62 134 46"/>
+      <path d="M134 46 L150 82"/><path d="M78 35 H96"/><path d="M134 46 L130 32 L143 30"/>
+      <path d="M101 76 Q112 62 126 52" stroke-width="6"/><circle cx="96" cy="84" r="5"/>`,
+    cargo: `<circle cx="36" cy="88" r="20"/><circle cx="160" cy="84" r="26"/>
+      <rect x="14" y="44" width="62" height="34"/><path d="M36 88 L82 86 L120 86 L160 84"/>
+      <path d="M120 86 L112 40"/><path d="M104 36 H122"/><path d="M160 84 L112 40"/>
+      <path d="M82 86 L88 40 L80 26 L94 24"/><path d="M36 88 L84 64"/><circle cx="120" cy="86" r="5"/>`,
+    long: `<circle cx="40" cy="86" r="24"/><circle cx="164" cy="84" r="26"/>
+      <path d="M40 86 L104 86 L96 40"/><path d="M40 62 H100"/><path d="M40 62 L40 86"/>
+      <path d="M104 86 Q120 64 146 46"/><path d="M146 46 L164 84"/><path d="M88 35 H106"/>
+      <path d="M146 46 L142 32 L155 30"/><circle cx="104" cy="86" r="5"/>`,
+  };
+  const key = art === "Lastenrad" ? "cargo" : art === "Longtail" ? "long" : art === "Tiefeinsteiger" ? "tief" : "rad";
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("viewBox", "0 0 200 120");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "1.6");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+  svg.innerHTML = lines[key];   // feste Zeichnung aus diesem Skript, keine Nutzerdaten
+  return svg;
+}
+
+function picture(b, withLabels = true) {
+  const box = el("div", { class: "pic" });
+  if (b.foto) {
+    const img = el("img", { src: "/_blob/" + b.foto, alt: b.modell, loading: "lazy" });
+    img.addEventListener("error", () => img.replaceWith(bikeDrawing(b.art)));
+    box.append(img);
+  } else box.append(bikeDrawing(b.art));
+  if (withLabels) {
+    const s = STATI.find((x) => x.key === b.status) || STATI[0];
+    box.append(el("span", { class: `status ${s.key}`, text: s.label }), el("span", { class: "invno", text: b.id }));
+  }
+  return box;
+}
+
+function specList(b) {
+  const item = (dt, dd, full) => el("div", { class: full ? "full" : null }, el("dt", { text: dt }), el("dd", { text: dd }));
+  return el("dl", { class: "specs" },
+    item("Rahmen", b.rahmen || "–"),
+    item("Körpergröße", b.kMin && b.kMax ? `${b.kMin}–${b.kMax} cm` : "–"),
+    item("Drehmoment", b.nm ? `${b.nm} Nm` : "–"),
+    item("Akku", b.wh ? `${b.wh} Wh` : "–"),
+    item("Schaltung", b.schaltung || "–", true),
+  );
+}
+
+/* ---------- 4. Speicher ---------- */
+
+function saveLocal() {
+  try { localStorage.setItem(LOCAL_KEY, JSON.stringify({ bikes: state.bikes, customers: state.customers })); } catch {}
+}
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem(LOCAL_KEY);
+    if (raw) { const d = JSON.parse(raw); state.bikes = d.bikes || []; state.customers = d.customers || []; return; }
+  } catch {}
+  state.bikes = PREVIEW_BIKES.map((b) => ({ ...b }));
+}
+
+function stripId(obj) { const { id, ...rest } = obj; return rest; }
+
+async function writeDoc(coll, id, data, merge) {
+  if (state.mode === "live") {
+    const ref = db.collection(coll).doc(id);
+    try { merge ? await ref.update(data) : await ref.set(data); }
+    catch (e) { handleWriteError(e); throw e; }
+  } else {
+    const list = coll === "raeder" ? state.bikes : state.customers;
+    const i = list.findIndex((x) => x.id === id);
+    if (i >= 0) list[i] = merge ? { ...list[i], ...data, id } : { ...data, id };
+    else list.push({ ...data, id });
+    saveLocal(); renderAll();
+  }
+}
+async function deleteDoc(coll, id) {
+  if (state.mode === "live") {
+    try { await db.collection(coll).doc(id).delete(); } catch (e) { handleWriteError(e); throw e; }
+  } else {
+    const key = coll === "raeder" ? "bikes" : "customers";
+    state[key] = state[key].filter((x) => x.id !== id);
+    saveLocal(); renderAll();
+  }
+}
+function handleWriteError(e) {
+  const code = e && e.code;
+  if (code === "invalid_argument") { state.canWrite = false; renderAll(); toast("Du kannst diese Kartei nur ansehen, nicht ändern."); }
+  else if (code === "quota_exceeded") toast("Der Speicher ist voll. Lösche alte Kunden, um Platz zu schaffen.");
+  else toast("Speichern hat nicht geklappt. Versuch es gleich noch einmal.");
+}
+
+/* ---------- 5. Logik ---------- */
+
+// Zufällige Kundennummer: ein Buchstabe, Minus, fünf Ziffern (z. B. K-48213). Doppelte werden verworfen.
+function newCustomerId() {
+  const taken = new Set(state.customers.map((c) => c.id));
+  const rnd = new Uint32Array(2);
+  for (let i = 0; i < 50; i++) {
+    crypto.getRandomValues(rnd);
+    const id = ID_LETTERS[rnd[0] % ID_LETTERS.length] + "-" + String(rnd[1] % 100000).padStart(5, "0");
+    if (!taken.has(id)) return id;
+  }
+  throw new Error("Keine freie Nummer gefunden");
+}
+
+function nextBikeId() {
+  const nums = state.bikes.map((b) => parseInt(String(b.id).replace(/\D/g, ""), 10)).filter((n) => !isNaN(n));
+  return "R-" + String((nums.length ? Math.max(...nums) : 0) + 1).padStart(2, "0");
+}
+
+const bikesOf = (custId) => state.bikes.filter((b) => b.status === "verliehen" && b.kunde === custId);
+
+async function lendBike(bikeId, custId) {
+  await writeDoc("raeder", bikeId, { status: "verliehen", kunde: custId, seit: new Date().toISOString() }, true);
+  toast(`${bikeId} an ${custId} verliehen.`);
+}
+async function returnBike(bikeId) {
+  await writeDoc("raeder", bikeId, { status: "verfügbar", kunde: null, seit: null }, true);
+  toast(`${bikeId} ist zurück und wieder verfügbar.`);
+}
+
+function visibleBikes() {
+  const q = filters.q.trim().toLowerCase();
+  const h = parseInt(filters.hoehe, 10);
+  return state.bikes.filter((b) => {
+    if (filters.art && b.art !== filters.art) return false;
+    if (filters.schaltung && b.schaltung !== filters.schaltung) return false;
+    if (filters.status.size && !filters.status.has(b.status)) return false;
+    if (h && fits(b, h) === false) return false;
+    if (q && ![b.id, b.modell, b.art, b.schaltung, b.rahmen].join(" ").toLowerCase().includes(q)) return false;
+    return true;
+  }).sort((a, b) => String(a.id).localeCompare(String(b.id), "de", { numeric: true }));
+}
+
+/* ---------- 6. Anzeige ---------- */
+
+function renderAll() {
+  renderFilterOptions();
+  renderBikes();
+  renderCustomers();
+  const free = state.bikes.filter((b) => b.status === "verfügbar").length;
+  $("#badge-inv").textContent = state.bikes.length ? `${free}/${state.bikes.length}` : "";
+  $("#badge-cust").textContent = state.customers.length || "";
+  $("#add-bike").hidden = !state.canWrite;
+  $("#new-cust").disabled = !state.canWrite;
+}
+
+function renderFilterOptions() {
+  const fill = (sel, first, values, current) => {
+    sel.replaceChildren(el("option", { value: "", text: first }), ...values.map((v) => el("option", { value: v, text: v })));
+    sel.value = values.includes(current) ? current : "";
+  };
+  const arten = ARTEN.filter((a) => state.bikes.some((b) => b.art === a));
+  fill($("#f-art"), "Alle Bauarten", arten, filters.art);
+  const sch = [...new Set(state.bikes.map((b) => b.schaltung).filter(Boolean))].sort((a, b) => a.localeCompare(b, "de"));
+  fill($("#f-schaltung"), "Alle Schaltungen", sch, filters.schaltung);
+
+  $("#status-chips").replaceChildren(...STATI.map((s) =>
+    el("button", {
+      class: "chip", type: "button", "aria-pressed": String(filters.status.has(s.key)), text: s.label,
+      onclick: () => { filters.status.has(s.key) ? filters.status.delete(s.key) : filters.status.add(s.key); renderFilterOptions(); renderBikes(); },
+    })
+  ));
+}
+
+function renderBikes() {
+  const list = visibleBikes();
+  const active = filters.q || filters.art || filters.hoehe || filters.schaltung || filters.status.size;
+  $("#reset").hidden = !active;
+  $("#count").textContent = state.bikes.length ? `${list.length} von ${state.bikes.length} Rädern` : "";
+
+  if (state.mode === "loading") return $("#grid").replaceChildren(el("p", { class: "empty", text: "Inventar wird geladen …" }));
+  if (!state.bikes.length) {
+    return $("#grid").replaceChildren(el("div", { class: "empty" },
+      el("p", { text: "Noch keine Räder im Inventar. Lege das erste Rad über „Rad hinzufügen“ an, mit Rahmengröße, Körpergrößen, Drehmoment, Akku und Schaltung." }),
+      state.canWrite ? el("button", { class: "btn", type: "button", text: "Rad hinzufügen", onclick: () => openBikeForm() }) : null
+    ));
+  }
+  if (!list.length) return $("#grid").replaceChildren(el("p", { class: "empty", text: "Kein Rad passt zu diesen Filtern. Setze einen Filter zurück, um mehr zu sehen." }));
+
+  $("#grid").replaceChildren(...list.map((b) =>
+    el("button", { class: "bike", type: "button", "aria-label": `${b.modell}, ${b.id}: Details öffnen`, onclick: () => openBike(b.id) },
+      picture(b),
+      el("div", { class: "bike-head" }, el("span", { class: "eyebrow", text: b.art || "" }), el("span", { class: "bike-name", text: b.modell })),
+      specList(b)
+    )
+  ));
+}
+
+function renderCustomers() {
+  const q = $("#cq").value.trim().toUpperCase();
+  const sort = $("#c-sort").value;
+  let list = state.customers.filter((c) => !q || c.id.includes(q) || (c.notiz || "").toUpperCase().includes(q));
+  list.sort((a, b) => {
+    if (sort === "id") return a.id.localeCompare(b.id);
+    if (sort === "aktiv") return bikesOf(b.id).length - bikesOf(a.id).length || (b.angelegt || "").localeCompare(a.angelegt || "");
+    return (b.angelegt || "").localeCompare(a.angelegt || "");
+  });
+
+  if (state.mode === "loading") return $("#cust-list").replaceChildren(el("li", { class: "empty", text: "Kartei wird geladen …" }));
+  if (!state.customers.length) return $("#cust-list").replaceChildren(el("li", { class: "empty", text: "Noch keine Kunden. „Neuer Kunde“ erzeugt eine Nummer wie K-48213, die du dem Kunden mitgibst." }));
+  if (!list.length) return $("#cust-list").replaceChildren(el("li", { class: "empty", text: "Keine Kundennummer passt zu dieser Suche." }));
+
+  $("#cust-list").replaceChildren(...list.map((c) => {
+    const rented = bikesOf(c.id);
+    return el("li", { class: "cust" },
+      el("button", { type: "button", onclick: () => openCustomer(c.id), "aria-label": `Kunde ${c.id}: Details öffnen` },
+        el("span", { class: "cid", text: c.id }),
+        el("span", { class: "muted", text: c.groesse ? `${c.groesse} cm` : "Größe offen" }),
+        el("span", { class: rented.length ? "rent on" : "rent muted", text: rented.length ? "Hat: " + rented.map(bikeName).join(", ") : "Kein Rad ausgeliehen" }),
+        el("span", { class: "muted", text: "seit " + fmtDate(c.angelegt) })
+      )
+    );
+  }));
+}
+
+/* ----- Dialoge ----- */
+
+function openDialog(...content) {
+  $("#dlg-body").replaceChildren(el("div", { class: "dlg" }, ...content));
+  if (!$("#dlg").open) $("#dlg").showModal();
+}
+const closeDialog = () => $("#dlg").close();
+const dlgHead = (eyebrow, title) => el("div", { class: "dlg-head" },
+  el("div", {}, el("span", { class: "eyebrow", text: eyebrow }), el("h3", { text: title })),
+  el("button", { class: "close", type: "button", "aria-label": "Schließen", text: "×", onclick: closeDialog })
+);
+
+// Zweimal tippen statt confirm(), das im Viewer nicht funktioniert.
+function armedButton(label, armedLabel, action) {
+  let armed = false, timer;
+  const btn = el("button", { class: "btn ghost", type: "button", text: label });
+  btn.addEventListener("click", async () => {
+    if (!armed) {
+      armed = true; btn.textContent = armedLabel; btn.className = "btn danger";
+      timer = setTimeout(() => { armed = false; btn.textContent = label; btn.className = "btn ghost"; }, 3000);
+      return;
+    }
+    clearTimeout(timer);
+    try { await action(); } catch {}
+  });
+  return btn;
+}
+
+function openBike(id) {
+  const b = state.bikes.find((x) => x.id === id);
+  if (!b) return;
+  let rental;
+  if (b.status === "verliehen") {
+    rental = el("div", { class: "rental-box" },
+      el("p", {}, "Verliehen an ", el("strong", { text: b.kunde || "unbekannt" }), b.seit ? ` seit ${fmtDate(b.seit)}` : ""),
+      state.canWrite ? el("div", { class: "actions" },
+        el("button", { class: "btn", type: "button", text: "Rücknahme buchen", onclick: async () => { await returnBike(b.id); closeDialog(); } }),
+        b.kunde ? el("button", { class: "btn ghost", type: "button", text: "Kunde öffnen", onclick: () => openCustomer(b.kunde) }) : null
+      ) : null
+    );
+  } else if (b.status === "verfügbar" && state.canWrite) {
+    const sel = el("select", { id: "lend-to" },
+      el("option", { value: "", text: state.customers.length ? "Kundennummer wählen" : "Noch keine Kunden angelegt" }),
+      ...[...state.customers].sort((a, c) => a.id.localeCompare(c.id)).map((c) => {
+        const f = fits(b, c.groesse);
+        return el("option", { value: c.id, text: c.id + (c.groesse ? ` · ${c.groesse} cm${f === false ? " (passt nicht)" : f ? " (passt)" : ""}` : "") });
+      })
+    );
+    const lend = el("button", { class: "btn", type: "button", text: "Verleihen", disabled: true,
+      onclick: async () => { if (sel.value) { await lendBike(b.id, sel.value); closeDialog(); } } });
+    const info = el("p", { class: "hint" });
+    sel.addEventListener("change", () => {
+      lend.disabled = !sel.value;
+      const c = state.customers.find((x) => x.id === sel.value);
+      const f = c ? fits(b, c.groesse) : null;
+      info.className = f === false ? "nomatch" : f ? "match" : "hint";
+      info.textContent = !c ? "" : f === false ? `Achtung: ${c.groesse} cm liegt außerhalb von ${b.kMin}–${b.kMax} cm.` : f ? "Rahmengröße passt zur Körpergröße." : "Für diesen Kunden ist keine Körpergröße hinterlegt.";
+    });
+    rental = el("div", { class: "rental-box" },
+      el("label", { class: "f", for: "lend-to" }, "Verleihen an", sel), info, el("div", { class: "actions" }, lend));
+  } else if (b.status === "werkstatt") {
+    rental = el("div", { class: "rental-box" }, el("p", { text: "Dieses Rad ist in der Werkstatt und kann gerade nicht verliehen werden." }));
+  }
+
+  openDialog(
+    dlgHead(`${b.art || "Rad"} · ${b.id}`, b.modell),
+    picture(b),
+    specList(b),
+    b.notiz ? el("p", { class: "hint", text: b.notiz }) : null,
+    rental,
+    state.canWrite ? el("div", { class: "actions" },
+      el("button", { class: "btn ghost", type: "button", text: "Bearbeiten", onclick: () => openBikeForm(b.id) }),
+      b.status !== "verliehen" ? armedButton("Aus Inventar löschen", "Wirklich löschen?", async () => { await deleteDoc("raeder", b.id); closeDialog(); toast(`${b.id} gelöscht.`); }) : null
+    ) : null
+  );
+}
+
+function openBikeForm(id) {
+  const b = id ? state.bikes.find((x) => x.id === id) : null;
+  const v = b || { id: nextBikeId(), art: "Trekking", status: "verfügbar", schaltung: SCHALTUNGEN[0] };
+  let fotoId = v.foto || null;
+
+  const inp = (fid, type, value, extra = {}) => el("input", { id: fid, type, value: value ?? "", ...extra });
+  const sel = (fid, opts, value) => {
+    const s = el("select", { id: fid }, ...opts.map((o) => el("option", { value: o.key ?? o, text: o.label ?? o })));
+    s.value = value ?? ""; return s;
+  };
+  const field = (label, control, full) => el("label", { class: "f" + (full ? " full" : ""), for: control.id }, label, control);
+
+  const schList = [...new Set([...SCHALTUNGEN, ...state.bikes.map((x) => x.schaltung).filter(Boolean)])];
+  const fields = {
+    nr: inp("bf-nr", "text", v.id, b ? { readonly: true } : { maxlength: 12 }),
+    modell: inp("bf-modell", "text", v.modell, { maxlength: 60, placeholder: "z. B. Nevo5 vario", required: true }),
+    art: sel("bf-art", ARTEN, v.art),
+    rahmen: inp("bf-rahmen", "text", v.rahmen, { maxlength: 20, placeholder: "z. B. 51 cm" }),
+    kMin: inp("bf-kmin", "number", v.kMin, { min: 120, max: 220, inputmode: "numeric" }),
+    kMax: inp("bf-kmax", "number", v.kMax, { min: 120, max: 220, inputmode: "numeric" }),
+    nm: inp("bf-nm", "number", v.nm, { min: 0, max: 200, inputmode: "numeric" }),
+    wh: inp("bf-wh", "number", v.wh, { min: 0, max: 3000, inputmode: "numeric" }),
+    schaltung: inp("bf-schaltung", "text", v.schaltung, { list: "schaltungen", maxlength: 40 }),
+    status: sel("bf-status", STATI.filter((s) => b ? true : s.key !== "verliehen"), v.status),
+    notiz: el("textarea", { id: "bf-notiz", maxlength: 300, placeholder: "z. B. Kindersitz montiert" }),
+  };
+  fields.notiz.value = v.notiz || "";
+  if (b && b.status === "verliehen") fields.status.disabled = true;
+
+  // Foto-Upload: nur für Personen, die die Seite bearbeiten dürfen.
+  let fotoBlock = null;
+  if (state.assets) {
+    const preview = el("div", { class: "pic" });
+    const showPreview = () => preview.replaceChildren(fotoId ? el("img", { src: "/_blob/" + fotoId, alt: "" }) : bikeDrawing(fields.art.value));
+    showPreview();
+    const file = el("input", { id: "bf-foto", type: "file", accept: "image/png,image/jpeg,image/webp" });
+    file.addEventListener("change", async () => {
+      const f = file.files && file.files[0];
+      if (!f) return;
+      toast("Foto wird hochgeladen …");
+      try { const r = await state.assets.upload(f); fotoId = r.id; showPreview(); toast("Foto hochgeladen."); }
+      catch (e) { toast(e && e.code === "too_large" ? "Das Foto ist größer als 20 MB." : e && e.code === "unsupported_type" ? "Bitte ein JPG-, PNG- oder WebP-Foto wählen." : "Upload hat nicht geklappt."); }
+    });
+    fotoBlock = el("div", { class: "full", style: null }, preview, field("Foto", file, true));
+  }
+
+  const err = el("p", { class: "nomatch", hidden: true });
+  const form = el("form", { class: "form-grid", novalidate: true },
+    field("Inventarnr.", fields.nr), field("Bauart", fields.art),
+    field("Modell", fields.modell, true),
+    field("Rahmengröße", fields.rahmen), field("Status", fields.status),
+    field("Körpergröße von (cm)", fields.kMin), field("bis (cm)", fields.kMax),
+    field("Drehmoment (Nm)", fields.nm), field("Akku (Wh)", fields.wh),
+    field("Schaltung", fields.schaltung, true),
+    el("datalist", { id: "schaltungen" }, ...schList.map((s) => el("option", { value: s }))),
+    fotoBlock,
+    field("Notiz", fields.notiz, true),
+    err,
+    el("div", { class: "actions full" },
+      el("button", { class: "btn", type: "submit", text: b ? "Änderungen speichern" : "Rad anlegen" }),
+      el("button", { class: "btn ghost", type: "button", text: "Abbrechen", onclick: () => (b ? openBike(b.id) : closeDialog()) })
+    )
+  );
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const nr = fields.nr.value.trim().toUpperCase();
+    const num = (x) => { const n = parseInt(x.value, 10); return isNaN(n) ? null : n; };
+    const data = {
+      modell: fields.modell.value.trim(), art: fields.art.value, rahmen: fields.rahmen.value.trim(),
+      kMin: num(fields.kMin), kMax: num(fields.kMax), nm: num(fields.nm), wh: num(fields.wh),
+      schaltung: fields.schaltung.value.trim(), notiz: fields.notiz.value.trim(), foto: fotoId,
+      status: b && b.status === "verliehen" ? "verliehen" : fields.status.value,
+      kunde: b ? b.kunde ?? null : null, seit: b ? b.seit ?? null : null,
+    };
+    const problem = !data.modell ? "Bitte ein Modell eintragen."
+      : !/^[A-Z0-9][A-Z0-9-]{0,11}$/.test(nr) ? "Die Inventarnummer darf nur Buchstaben, Ziffern und Minus enthalten."
+      : !b && state.bikes.some((x) => x.id === nr) ? `Die Nummer ${nr} ist schon vergeben.`
+      : data.kMin && data.kMax && data.kMin > data.kMax ? "Die untere Körpergröße ist größer als die obere."
+      : null;
+    if (problem) { err.textContent = problem; err.hidden = false; return; }
+    try { await writeDoc("raeder", nr, data, false); } catch { return; }
+    toast(b ? "Gespeichert." : `${nr} angelegt.`);
+    openBike(nr);
+  });
+
+  openDialog(dlgHead(b ? "Rad bearbeiten" : "Neues Rad", b ? b.modell : "Rad hinzufügen"), form);
+}
+
+function openNewCustomer() {
+  let id;
+  try { id = newCustomerId(); } catch { return toast("Es konnte keine freie Nummer erzeugt werden."); }
+  const idText = el("strong", { text: id });
+  const size = el("input", { id: "nc-size", type: "number", min: 120, max: 220, inputmode: "numeric", placeholder: "z. B. 178" });
+  const note = el("textarea", { id: "nc-note", maxlength: 300, placeholder: "z. B. bevorzugt Tiefeinsteiger. Keine Namen oder Adressen." });
+
+  const copy = el("button", { class: "btn ghost", type: "button", text: "Kopieren", onclick: async () => {
+    try { await navigator.clipboard.writeText(id); toast("Nummer kopiert."); } catch { toast("Bitte die Nummer abschreiben."); }
+  } });
+  const reroll = el("button", { class: "link", type: "button", text: "Andere Nummer würfeln", onclick: () => { id = newCustomerId(); idText.textContent = id; } });
+
+  const form = el("form", { class: "form-grid", novalidate: true },
+    el("div", { class: "bigid full" }, idText, copy),
+    el("div", { class: "full" }, reroll),
+    el("label", { class: "f", for: "nc-size" }, "Körpergröße (cm)", size),
+    el("label", { class: "f full", for: "nc-note" }, "Notiz", note),
+    el("p", { class: "hint full", text: "Gib dem Kunden die Nummer mit. Die Zuordnung zum Namen bleibt außerhalb dieses Systems, zum Beispiel auf dem Vertrag aus Papier." }),
+    el("div", { class: "actions full" },
+      el("button", { class: "btn", type: "submit", text: "Kunde anlegen" }),
+      el("button", { class: "btn ghost", type: "button", text: "Abbrechen", onclick: closeDialog })
+    )
+  );
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const g = parseInt(size.value, 10);
+    try { await writeDoc("kunden", id, { angelegt: new Date().toISOString(), groesse: isNaN(g) ? null : g, notiz: note.value.trim() }, false); }
+    catch { return; }
+    toast(`Kunde ${id} angelegt.`);
+    openCustomer(id);
+  });
+  openDialog(dlgHead("Kundenkartei", "Neuer Kunde"), form);
+}
+
+function openCustomer(id) {
+  const c = state.customers.find((x) => x.id === id);
+  if (!c) return openDialog(dlgHead("Kundenkartei", id), el("p", { class: "hint", text: "Diese Kundennummer ist nicht (mehr) in der Kartei." }));
+  const rented = bikesOf(id);
+
+  const size = el("input", { id: "cd-size", type: "number", min: 120, max: 220, inputmode: "numeric", value: c.groesse ?? "" , disabled: !state.canWrite });
+  const note = el("textarea", { id: "cd-note", maxlength: 300, disabled: !state.canWrite });
+  note.value = c.notiz || "";
+
+  openDialog(
+    dlgHead(`Kunde seit ${fmtDate(c.angelegt)}`, c.id),
+    el("div", { class: "rental-box" },
+      rented.length
+        ? rented.map((b) => el("div", { class: "actions" },
+            el("p", { style: null }, el("strong", { text: bikeName(b) }), b.seit ? ` · seit ${fmtDate(b.seit)}` : ""),
+            state.canWrite ? el("button", { class: "btn ghost", type: "button", text: "Rücknahme buchen", onclick: async () => { await returnBike(b.id); openCustomer(id); } }) : null
+          ))
+        : el("p", { text: "Kein Rad ausgeliehen." }),
+      el("div", { class: "actions" },
+        el("button", { class: "btn ghost", type: "button", text: c.groesse ? `Passende Räder (${c.groesse} cm)` : "Freie Räder zeigen", onclick: () => {
+          filters.hoehe = c.groesse ? String(c.groesse) : ""; $("#f-hoehe").value = filters.hoehe;
+          filters.status = new Set(["verfügbar"]);
+          closeDialog(); showTab("inventar"); renderFilterOptions(); renderBikes();
+        } })
+      )
+    ),
+    el("form", { class: "form-grid", novalidate: true, onsubmit: async (e) => {
+        e.preventDefault();
+        const g = parseInt(size.value, 10);
+        try { await writeDoc("kunden", id, { groesse: isNaN(g) ? null : g, notiz: note.value.trim() }, true); } catch { return; }
+        toast("Gespeichert.");
+      } },
+      el("label", { class: "f", for: "cd-size" }, "Körpergröße (cm)", size),
+      el("label", { class: "f full", for: "cd-note" }, "Notiz", note),
+      state.canWrite ? el("div", { class: "actions full" },
+        el("button", { class: "btn", type: "submit", text: "Speichern" }),
+        rented.length ? null : armedButton("Kunde löschen", "Wirklich löschen?", async () => { await deleteDoc("kunden", id); closeDialog(); toast(`Kunde ${id} gelöscht.`); })
+      ) : null
+    ),
+    rented.length && state.canWrite ? el("p", { class: "hint", text: "Löschen geht erst, wenn alle Räder zurückgebucht sind." }) : null
+  );
+}
+
+function showTab(name) {
+  for (const t of document.querySelectorAll("[role=tab]")) t.setAttribute("aria-selected", String(t.dataset.tab === name));
+  $("#view-inventar").hidden = name !== "inventar";
+  $("#view-kunden").hidden = name !== "kunden";
+  try { localStorage.setItem("fahrradverleih-tab", name); } catch {}
+  window.scrollTo(0, 0);
+}
+
+/* ---------- 7. Start ---------- */
+
+function wire() {
+  $("#q").addEventListener("input", (e) => { filters.q = e.target.value; renderBikes(); });
+  $("#f-art").addEventListener("change", (e) => { filters.art = e.target.value; renderBikes(); });
+  $("#f-schaltung").addEventListener("change", (e) => { filters.schaltung = e.target.value; renderBikes(); });
+  $("#f-hoehe").addEventListener("input", (e) => { filters.hoehe = e.target.value; renderBikes(); });
+  $("#reset").addEventListener("click", () => {
+    Object.assign(filters, { q: "", art: "", hoehe: "", schaltung: "", status: new Set() });
+    $("#q").value = ""; $("#f-hoehe").value = "";
+    renderFilterOptions(); renderBikes();
+  });
+  $("#cq").addEventListener("input", renderCustomers);
+  $("#c-sort").addEventListener("change", renderCustomers);
+  $("#add-bike").addEventListener("click", () => openBikeForm());
+  $("#new-cust").addEventListener("click", openNewCustomer);
+  for (const t of document.querySelectorAll("[role=tab]")) t.addEventListener("click", () => showTab(t.dataset.tab));
+  $("#dlg").addEventListener("click", (e) => { if (e.target === $("#dlg")) closeDialog(); });
+}
+
+async function boot() {
+  wire();
+  try { const t = localStorage.getItem("fahrradverleih-tab"); if (t === "kunden") showTab("kunden"); } catch {}
+  renderAll();
+
+  db = window.claude ? await claude.use("db").catch(() => null) : null;
+
+  if (!db) {
+    state.mode = "local";
+    loadLocal();
+    $("#mode").textContent = "Lokale Vorschau · Daten bleiben in diesem Browser";
+    renderAll();
+    return;
+  }
+
+  state.mode = "live";
+  $("#mode").textContent = "Gemeinsame Kartei · live";
+  claude.use("assets").then((a) => { state.assets = a; }).catch(() => {});
+  claude.use("user").then((u) => {
+    const c = u && u.can ? u.can("data.write") : null;
+    if (c === false) { state.canWrite = false; renderAll(); }
+  }).catch(() => {});
+
+  let loaded = 0;
+  const done = () => { if (++loaded >= 2) renderAll(); else if (loaded === 1) {} };
+  const onErr = () => { $("#mode").textContent = "Verbindung unterbrochen · lade die Seite neu"; };
+  let firstR = true, firstK = true;
+  db.collection("raeder").onSnapshot((s) => {
+    state.bikes = s.docs.map((d) => ({ ...d.data(), id: d.id }));
+    if (firstR) { firstR = false; done(); } else renderAll();
+  }, onErr);
+  db.collection("kunden").onSnapshot((s) => {
+    state.customers = s.docs.map((d) => ({ ...d.data(), id: d.id }));
+    if (firstK) { firstK = false; done(); } else renderAll();
+  }, onErr);
+}
+
+boot();
+</script>
+
+</body>
+</html>
