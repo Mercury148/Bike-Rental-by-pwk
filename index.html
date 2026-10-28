@@ -331,12 +331,19 @@ const STATI = [
 ];
 // Modelle im Verleih. Drehmoment, Akku und Schaltung folgen fest aus dem Modell und sind nicht einzeln wählbar.
 const MODELLE = {
-  "Nevo5 Silent Core":           { nm: 75, wh: 540, schaltung: "Shimano Nexus 5-Gang" },
-  "Nevo5 Silent Core Rücktritt": { nm: 75, wh: 540, schaltung: "Shimano Nexus 5-Gang mit Rücktritt" },
-  "Nevo5 Vario Core":            { nm: 90, wh: 720, schaltung: "enviolo Nabenschaltung (stufenlos)" },
+  "Nevo5 silent CORE":    { nm: 75, wh: 540, schaltung: "Shimano Nexus, 5-Gang-Nabenschaltung, Riemenantrieb" },
+  "Nevo5 rücktritt CORE": { nm: 75, wh: 540, schaltung: "Shimano Nexus, 5-Gang-Nabenschaltung, Riemenantrieb, Rücktritt" },
+  "Nevo5 vario CORE":     { nm: 90, wh: 720, schaltung: "Enviolo, stufenlose Nabenschaltung, Riemenantrieb" },
 };
-// Findet das Modell auch bei abweichender Schreibweise (z. B. „Nevo5 silent CORE“ aus älteren Einträgen).
-const modelKey = (name) => Object.keys(MODELLE).find((k) => k.toLowerCase() === String(name || "").trim().toLowerCase()) || null;
+// Ältere Schreibweisen, die noch in gespeicherten Einträgen stehen können.
+const MODELL_ALIASE = { "nevo5 silent core rücktritt": "Nevo5 rücktritt CORE" };
+// Findet das Modell unabhängig von Groß- und Kleinschreibung.
+const modelKey = (name) => {
+  const n = String(name || "").trim().toLowerCase();
+  return Object.keys(MODELLE).find((k) => k.toLowerCase() === n) || MODELL_ALIASE[n] || null;
+};
+// Angezeigter Name immer in der Schreibweise von Riese & Müller.
+const modelName = (b) => modelKey(b.modell) || b.modell || "";
 const specOf = (b) => MODELLE[modelKey(b.modell)] || b;   // ältere Einträge ohne bekanntes Modell nutzen ihre gespeicherten Werte
 const nmOf = (b) => specOf(b).nm;
 const whOf = (b) => specOf(b).wh;
@@ -354,13 +361,13 @@ const FARB_VORSCHLAEGE = [
 
 // Standardausstattung für neue Räder, nach der Konfiguration F01810_01131410 (Nevo5 silent CORE).
 const STANDARD = {
-  modell: "Nevo5 Silent Core", art: "Tiefeinsteiger", rahmen: "L",
+  modell: "Nevo5 silent CORE", art: "Tiefeinsteiger", rahmen: "L",
 };
 
 // Körpergrößen je Rahmengröße laut Riese & Müller Größentabelle (Nevo5).
 const RAHMEN_GROESSEN = { S: [155, 170], M: [165, 180], L: [175, 190], XL: [185, 210] };
 
-// Komponenten laut Konfiguration. Wird nur beim Modell „Nevo5 Silent Core“ angezeigt.
+// Komponenten laut Konfiguration. Wird nur beim Modell „Nevo5 silent CORE“ angezeigt.
 const AUSSTATTUNG = [
   ["Motor", "Bosch Performance Line, 25 km/h"],
   ["Display", "Bosch Purion 200"],
@@ -425,7 +432,7 @@ function toast(msg) {
 }
 
 const fmtDate = (iso) => { try { return new Date(iso).toLocaleDateString("de-DE"); } catch { return ""; } };
-const bikeName = (b) => b ? `${b.modell} · ${b.id}` : "";
+const bikeName = (b) => b ? `${modelName(b)} · ${b.id}` : "";
 // Empfohlene Körpergröße kommt immer aus der Rahmengröße (ältere Einträge ohne S–XL nutzen ihre gespeicherten Werte).
 const bodyRange = (b) => RAHMEN_GROESSEN[b.rahmen] || (b.kMin && b.kMax ? [b.kMin, b.kMax] : null);
 const rangeText = (r) => r ? `${r[0]}–${r[1]} cm` : "–";
@@ -485,7 +492,7 @@ function picture(b, withLabels = true) {
   const box = el("div", { class: "pic" });
   const foto = photoOf(b);
   if (foto) {
-    const img = el("img", { src: "/_blob/" + foto, alt: b.modell, loading: "lazy" });
+    const img = el("img", { src: "/_blob/" + foto, alt: modelName(b), loading: "lazy" });
     img.addEventListener("error", () => img.replaceWith(bikeDrawing(b.art)));
     box.append(img);
   } else box.append(bikeDrawing(b.art));
@@ -590,7 +597,7 @@ function visibleBikes() {
     if (filters.schaltung && schaltungOf(b) !== filters.schaltung) return false;
     if (filters.status.size && !filters.status.has(b.status)) return false;
     if (h && fits(b, h) === false) return false;
-    if (q && ![b.id, b.modell, b.art, schaltungOf(b), b.rahmen, (colorOf(b) || {}).name].join(" ").toLowerCase().includes(q)) return false;
+    if (q && ![b.id, modelName(b), b.art, schaltungOf(b), b.rahmen, (colorOf(b) || {}).name].join(" ").toLowerCase().includes(q)) return false;
     return true;
   }).sort((a, b) => String(a.id).localeCompare(String(b.id), "de", { numeric: true }));
 }
@@ -646,10 +653,10 @@ function renderBikes() {
   if (!list.length) return $("#grid").replaceChildren(el("p", { class: "empty", text: "Kein Rad passt zu diesen Filtern. Setze einen Filter zurück, um mehr zu sehen." }));
 
   $("#grid").replaceChildren(...list.map((b) =>
-    tile("bike", `${b.modell}, ${b.id}: Details öffnen`, () => openBike(b.id),
+    tile("bike", `${modelName(b)}, ${b.id}: Details öffnen`, () => openBike(b.id),
       picture(b),
       photoNote(b) || emptyNote(),
-      el("div", { class: "bike-head" }, el("span", { class: "eyebrow" }, colorLabel(b) || b.art || ""), el("span", { class: "bike-name", text: b.modell })),
+      el("div", { class: "bike-head" }, el("span", { class: "eyebrow" }, colorLabel(b) || b.art || ""), el("span", { class: "bike-name", text: modelName(b) })),
       specList(b)
     )
   ), ghost || "");
@@ -775,11 +782,11 @@ function openBike(id) {
   }
 
   openDialog(
-    dlgHead(`${b.art || "Rad"} · ${b.id}`, b.modell),
+    dlgHead(`${b.art || "Rad"} · ${b.id}`, modelName(b)),
     picture(b),
     photoNote(b),
     specList(b),
-    modelKey(b.modell) === "Nevo5 Silent Core" ? el("details", { class: "equip" },
+    modelKey(b.modell) === "Nevo5 silent CORE" ? el("details", { class: "equip" },
       el("summary", { text: "Standardausstattung" }),
       el("dl", {}, ...AUSSTATTUNG.map(([k, val]) => el("div", {}, el("dt", { text: k }), el("dd", { text: val }))))
     ) : null,
@@ -915,7 +922,7 @@ function openBikeForm(id) {
     openBike(nr);
   });
 
-  openDialog(dlgHead(b ? "Rad bearbeiten" : "Neues Rad", b ? b.modell : "Rad hinzufügen"), form);
+  openDialog(dlgHead(b ? "Rad bearbeiten" : "Neues Rad", b ? modelName(b) : "Rad hinzufügen"), form);
 }
 
 function openNewCustomer() {
