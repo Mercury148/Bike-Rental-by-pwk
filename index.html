@@ -106,6 +106,9 @@ textarea { resize: vertical; min-height: 5rem; }
 .bike:hover .pic svg, .bike:hover .pic img { transform: scale(1.025); }
 .pic { position: relative; aspect-ratio: 4 / 3; max-width: 100%; background: var(--stone); overflow: hidden; display: grid; place-items: center; }
 .pic svg { width: 82%; height: auto; color: var(--ink); transition: transform 0.4s ease; }
+.pic-note { margin: 0; font-size: 0.75rem; line-height: 1.4; color: var(--ink-soft); }
+.bike .pic-note { margin-top: -0.55rem; }
+.dlg .pic-note { margin-top: -0.9rem; }
 .pic img { width: 100%; height: 100%; object-fit: contain; transition: transform 0.4s ease; }
 .status { position: absolute; top: 0.75rem; left: 0.75rem; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.2rem 0.6rem; background: var(--paper); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; }
 .status::before { content: ""; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: currentColor; }
@@ -463,6 +466,13 @@ function bikeDrawing(art) {
   return svg;
 }
 
+// Hinweis unter Farbbildern: das Bild zeigt die Farbe, nicht die genaue Ausstattung dieses Rads.
+function photoNote(b) {
+  return !b.foto && (colorOf(b) || {}).foto
+    ? el("p", { class: "pic-note", text: "Beispielbild. Die genaue Ausstattung kann abweichen, maßgeblich ist die Farbe." })
+    : null;
+}
+
 function picture(b, withLabels = true) {
   const box = el("div", { class: "pic" });
   const foto = photoOf(b);
@@ -630,6 +640,7 @@ function renderBikes() {
   $("#grid").replaceChildren(...list.map((b) =>
     el("button", { class: "bike", type: "button", "aria-label": `${b.modell}, ${b.id}: Details öffnen`, onclick: () => openBike(b.id) },
       picture(b),
+      photoNote(b),
       el("div", { class: "bike-head" }, el("span", { class: "eyebrow" }, colorLabel(b) || b.art || ""), el("span", { class: "bike-name", text: b.modell })),
       specList(b)
     )
@@ -734,14 +745,19 @@ function openBike(id) {
       info.textContent = !c ? "" : f === false ? `Achtung: ${c.groesse} cm liegt außerhalb von ${rangeText(bodyRange(b))}.` : f ? "Rahmengröße passt zur Körpergröße." : "Für diesen Kunden ist keine Körpergröße hinterlegt.";
     });
     rental = el("div", { class: "rental-box" },
-      el("label", { class: "f", for: "lend-to" }, "Verleihen an", sel), info, el("div", { class: "actions" }, lend));
+      el("label", { class: "f", for: "lend-to" }, "Verleihen an", sel), info, el("div", { class: "actions" }, lend,
+        el("button", { class: "btn ghost", type: "button", text: "In die Werkstatt", onclick: () => setStatus(b.id, "werkstatt") })));
   } else if (b.status === "werkstatt") {
-    rental = el("div", { class: "rental-box" }, el("p", { text: "Dieses Rad ist in der Werkstatt und kann gerade nicht verliehen werden." }));
+    rental = el("div", { class: "rental-box" },
+      el("p", { text: "Dieses Rad ist in der Werkstatt und kann gerade nicht verliehen werden." }),
+      state.canWrite ? el("div", { class: "actions" },
+        el("button", { class: "btn", type: "button", text: "Wieder verfügbar", onclick: () => setStatus(b.id, "verfügbar") })) : null);
   }
 
   openDialog(
     dlgHead(`${b.art || "Rad"} · ${b.id}`, b.modell),
     picture(b),
+    photoNote(b),
     specList(b),
     modelKey(b.modell) === "Nevo5 Silent Core" ? el("details", { class: "equip" },
       el("summary", { text: "Standardausstattung" }),
@@ -754,6 +770,13 @@ function openBike(id) {
       b.status !== "verliehen" ? armedButton("Aus Inventar löschen", "Wirklich löschen?", async () => { await deleteDoc("raeder", b.id); closeDialog(); toast(`${b.id} gelöscht.`); }) : null
     ) : null
   );
+}
+
+// Status wird im Detailfenster geändert, nicht im Formular. Verliehen/zurück läuft über Verleihen und Rücknahme.
+async function setStatus(id, status) {
+  try { await writeDoc("raeder", id, { status }, true); } catch { return; }
+  toast(status === "werkstatt" ? `${id} ist in der Werkstatt.` : `${id} ist wieder verfügbar.`);
+  openBike(id);
 }
 
 function openBikeForm(id) {
@@ -774,14 +797,12 @@ function openBikeForm(id) {
   const fields = {
     nr: inp("bf-nr", "text", v.id, b ? { readonly: true } : { maxlength: 12 }),
     modell: sel("bf-modell", [{ key: "", label: "Modell wählen" }, ...Object.keys(MODELLE)], modelKey(v.modell) || ""),
-    art: sel("bf-art", ARTEN, v.art),
     rahmen: sel("bf-rahmen", [{ key: "", label: "Rahmengröße wählen" },
       ...Object.keys(RAHMEN_GROESSEN).map((k) => ({ key: k, label: k }))], RAHMEN_GROESSEN[v.rahmen] ? v.rahmen : ""),
     koerper: el("output", { id: "bf-koerper", class: "readout", for: "bf-rahmen" }),
     nm: el("output", { id: "bf-nm", class: "readout", for: "bf-modell" }),
     wh: el("output", { id: "bf-wh", class: "readout", for: "bf-modell" }),
     schaltung: el("output", { id: "bf-schaltung", class: "readout", for: "bf-modell" }),
-    status: sel("bf-status", STATI.filter((s) => b ? true : s.key !== "verliehen"), v.status),
     farbe: sel("bf-farbe", [{ key: "", label: state.colors.length ? "Farbe wählen" : "Noch keine Farben angelegt" },
       ...[...state.colors].sort((a, c) => a.name.localeCompare(c.name, "de")).map((c) => ({ key: c.id, label: c.name }))], v.farbe || ""),
     notiz: el("textarea", { id: "bf-notiz", maxlength: 300, placeholder: "z. B. Kindersitz montiert" }),
@@ -805,7 +826,6 @@ function openBikeForm(id) {
   };
   fields.modell.addEventListener("change", showModell);
   showModell();
-  if (b && b.status === "verliehen") fields.status.disabled = true;
 
   // Bild: kommt automatisch aus der gewählten Farbe. Ein eigenes Foto pro Rad ist optional und hat Vorrang.
   const preview = el("div", { class: "pic" });
@@ -814,7 +834,7 @@ function openBikeForm(id) {
   const showPreview = () => {
     const c = state.colors.find((x) => x.id === fields.farbe.value);
     const src = fotoId || (c && c.foto);
-    preview.replaceChildren(src ? el("img", { src: "/_blob/" + src, alt: "" }) : bikeDrawing(fields.art.value));
+    preview.replaceChildren(src ? el("img", { src: "/_blob/" + src, alt: "" }) : bikeDrawing("Tiefeinsteiger"));
     previewHint.textContent = fotoId ? "Dieses Rad zeigt ein eigenes Foto."
       : c && c.foto ? `Bild der Farbe ${c.name}, wird automatisch übernommen.`
       : c ? `Für ${c.name} ist noch kein Bild hinterlegt. Lade es unter „Farben & Bilder“ hoch.`
@@ -822,7 +842,6 @@ function openBikeForm(id) {
     clearOwn.hidden = !fotoId;
   };
   fields.farbe.addEventListener("change", showPreview);
-  fields.art.addEventListener("change", showPreview);
   let ownPhotoField = null;
   if (state.assets) {
     const file = el("input", { id: "bf-foto", type: "file", accept: "image/png,image/jpeg,image/webp" });
@@ -841,7 +860,6 @@ function openBikeForm(id) {
     fotoBlock,
     field("Modell", fields.modell, true),
     field("Rahmengröße", fields.rahmen), field("Empfohlene Körpergröße", fields.koerper),
-    field("Status", fields.status), field("Bauart", fields.art),
     field("Drehmoment", fields.nm), field("Akku", fields.wh),
     field("Schaltung", fields.schaltung, true),
     field("Notiz", fields.notiz, true),
@@ -856,14 +874,14 @@ function openBikeForm(id) {
     const nr = fields.nr.value.trim().toUpperCase();
     const num = (x) => { const n = parseInt(x.value, 10); return isNaN(n) ? null : n; };
     const data = {
-      modell: fields.modell.value, art: fields.art.value, rahmen: fields.rahmen.value,
+      modell: fields.modell.value, art: "Tiefeinsteiger", rahmen: fields.rahmen.value,
       // Mitgespeichert, damit die Werte auch in der Datenbank lesbar sind. Maßgeblich bleibt die Rahmengröße.
       kMin: (RAHMEN_GROESSEN[fields.rahmen.value] || [null])[0], kMax: (RAHMEN_GROESSEN[fields.rahmen.value] || [null, null])[1],
       // Mitgespeichert, damit die Werte auch in der Datenbank lesbar sind. Maßgeblich bleibt das Modell.
       nm: (MODELLE[fields.modell.value] || {}).nm ?? null, wh: (MODELLE[fields.modell.value] || {}).wh ?? null,
       schaltung: (MODELLE[fields.modell.value] || {}).schaltung ?? null, notiz: fields.notiz.value.trim(), foto: fotoId,
       farbe: fields.farbe.value || null,
-      status: b && b.status === "verliehen" ? "verliehen" : fields.status.value,
+      status: b ? b.status : "verfügbar",   // neue Räder starten immer als verfügbar
       kunde: b ? b.kunde ?? null : null, seit: b ? b.seit ?? null : null,
     };
     const problem = !data.modell ? "Bitte ein Modell wählen."
