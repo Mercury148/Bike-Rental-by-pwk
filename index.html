@@ -183,6 +183,7 @@ dialog::backdrop { background: rgba(20, 20, 18, 0.45); }
 
 /* ---------- Farben ---------- */
 .head-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.readout { display: flex; align-items: center; min-height: 44px; padding: 0 0.75rem; background: var(--stone); font-size: 0.95rem; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--ink); font-variant-numeric: tabular-nums; }
 .equip { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
 .equip summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }
 .equip dl { margin: 0 0 0.75rem; display: grid; gap: 0.35rem; }
@@ -398,7 +399,10 @@ function toast(msg) {
 
 const fmtDate = (iso) => { try { return new Date(iso).toLocaleDateString("de-DE"); } catch { return ""; } };
 const bikeName = (b) => b ? `${b.modell} · ${b.id}` : "";
-const fits = (b, h) => h && b.kMin && b.kMax ? h >= b.kMin && h <= b.kMax : null;
+// Empfohlene Körpergröße kommt immer aus der Rahmengröße (ältere Einträge ohne S–XL nutzen ihre gespeicherten Werte).
+const bodyRange = (b) => RAHMEN_GROESSEN[b.rahmen] || (b.kMin && b.kMax ? [b.kMin, b.kMax] : null);
+const rangeText = (r) => r ? `${r[0]}–${r[1]} cm` : "–";
+const fits = (b, h) => { const r = bodyRange(b); return h && r ? h >= r[0] && h <= r[1] : null; };
 
 // Farbe eines Rads und das Bild, das es zeigt: eigenes Foto, sonst das Bild seiner Farbe.
 const colorOf = (b) => state.colors.find((c) => c.id === b.farbe) || null;
@@ -462,7 +466,7 @@ function specList(b) {
   const item = (dt, dd, full) => el("div", { class: full ? "full" : null }, el("dt", { text: dt }), el("dd", { text: dd }));
   return el("dl", { class: "specs" },
     item("Rahmen", b.rahmen || "–"),
-    item("Körpergröße", b.kMin && b.kMax ? `${b.kMin}–${b.kMax} cm` : "–"),
+    item("Körpergröße", rangeText(bodyRange(b))),
     item("Drehmoment", b.nm ? `${b.nm} Nm` : "–"),
     item("Akku", b.wh ? `${b.wh} Wh` : "–"),
     item("Schaltung", b.schaltung || "–"),
@@ -700,7 +704,7 @@ function openBike(id) {
       const c = state.customers.find((x) => x.id === sel.value);
       const f = c ? fits(b, c.groesse) : null;
       info.className = f === false ? "nomatch" : f ? "match" : "hint";
-      info.textContent = !c ? "" : f === false ? `Achtung: ${c.groesse} cm liegt außerhalb von ${b.kMin}–${b.kMax} cm.` : f ? "Rahmengröße passt zur Körpergröße." : "Für diesen Kunden ist keine Körpergröße hinterlegt.";
+      info.textContent = !c ? "" : f === false ? `Achtung: ${c.groesse} cm liegt außerhalb von ${rangeText(bodyRange(b))}.` : f ? "Rahmengröße passt zur Körpergröße." : "Für diesen Kunden ist keine Körpergröße hinterlegt.";
     });
     rental = el("div", { class: "rental-box" },
       el("label", { class: "f", for: "lend-to" }, "Verleihen an", sel), info, el("div", { class: "actions" }, lend));
@@ -728,7 +732,7 @@ function openBike(id) {
 function openBikeForm(id) {
   const b = id ? state.bikes.find((x) => x.id === id) : null;
   const v = b || {
-    id: nextBikeId(), ...STANDARD, kMin: RAHMEN_GROESSEN[STANDARD.rahmen][0], kMax: RAHMEN_GROESSEN[STANDARD.rahmen][1], status: "verfügbar",
+    id: nextBikeId(), ...STANDARD, status: "verfügbar",
     farbe: state.colors.length === 1 ? state.colors[0].id : "",
   };
   let fotoId = v.foto || null;
@@ -745,9 +749,9 @@ function openBikeForm(id) {
     nr: inp("bf-nr", "text", v.id, b ? { readonly: true } : { maxlength: 12 }),
     modell: inp("bf-modell", "text", v.modell, { maxlength: 60, placeholder: "z. B. Nevo5 vario", required: true }),
     art: sel("bf-art", ARTEN, v.art),
-    rahmen: inp("bf-rahmen", "text", v.rahmen, { maxlength: 20, placeholder: "S, M, L oder XL", list: "rahmengroessen" }),
-    kMin: inp("bf-kmin", "number", v.kMin, { min: 120, max: 220, inputmode: "numeric" }),
-    kMax: inp("bf-kmax", "number", v.kMax, { min: 120, max: 220, inputmode: "numeric" }),
+    rahmen: sel("bf-rahmen", [{ key: "", label: "Rahmengröße wählen" },
+      ...Object.keys(RAHMEN_GROESSEN).map((k) => ({ key: k, label: k }))], RAHMEN_GROESSEN[v.rahmen] ? v.rahmen : ""),
+    koerper: el("output", { id: "bf-koerper", class: "readout", for: "bf-rahmen" }),
     nm: inp("bf-nm", "number", v.nm, { min: 0, max: 200, inputmode: "numeric" }),
     wh: inp("bf-wh", "number", v.wh, { min: 0, max: 3000, inputmode: "numeric" }),
     schaltung: inp("bf-schaltung", "text", v.schaltung, { list: "schaltungen", maxlength: 40 }),
@@ -757,12 +761,14 @@ function openBikeForm(id) {
     notiz: el("textarea", { id: "bf-notiz", maxlength: 300, placeholder: "z. B. Kindersitz montiert" }),
   };
   fields.notiz.value = v.notiz || "";
-  // Rahmengröße wählen trägt die passenden Körpergrößen gleich mit ein.
-  fields.rahmen.addEventListener("change", () => {
-    const key = fields.rahmen.value.trim().toUpperCase();
-    const p = RAHMEN_GROESSEN[key];
-    if (p) { fields.rahmen.value = key; fields.kMin.value = p[0]; fields.kMax.value = p[1]; }
-  });
+  // Die empfohlene Körpergröße wird nur angezeigt, nie eingegeben: sie folgt aus der Rahmengröße.
+  const showKoerper = () => {
+    const r = RAHMEN_GROESSEN[fields.rahmen.value];
+    fields.koerper.textContent = r ? rangeText(r)
+      : b && b.rahmen ? `Bisher „${b.rahmen}“. Bitte S, M, L oder XL wählen.` : "Ergibt sich aus der Rahmengröße";
+  };
+  fields.rahmen.addEventListener("change", showKoerper);
+  showKoerper();
   if (b && b.status === "verliehen") fields.status.disabled = true;
 
   // Bild: kommt automatisch aus der gewählten Farbe. Ein eigenes Foto pro Rad ist optional und hat Vorrang.
@@ -798,12 +804,11 @@ function openBikeForm(id) {
     field("Inventarnr.", fields.nr), field("Farbe", fields.farbe),
     fotoBlock,
     field("Modell", fields.modell, true),
-    field("Rahmengröße", fields.rahmen), field("Status", fields.status),
-    field("Körpergröße von (cm)", fields.kMin), field("bis (cm)", fields.kMax),
+    field("Rahmengröße", fields.rahmen), field("Empfohlene Körpergröße", fields.koerper),
+    field("Status", fields.status), field("Bauart", fields.art),
     field("Drehmoment (Nm)", fields.nm), field("Akku (Wh)", fields.wh),
-    field("Schaltung", fields.schaltung), field("Bauart", fields.art),
+    field("Schaltung", fields.schaltung, true),
     el("datalist", { id: "schaltungen" }, ...schList.map((s) => el("option", { value: s }))),
-    el("datalist", { id: "rahmengroessen" }, ...Object.entries(RAHMEN_GROESSEN).map(([k, [a, z]]) => el("option", { value: k, label: `${a}–${z} cm` }))),
     field("Notiz", fields.notiz, true),
     err,
     el("div", { class: "actions full" },
@@ -816,8 +821,10 @@ function openBikeForm(id) {
     const nr = fields.nr.value.trim().toUpperCase();
     const num = (x) => { const n = parseInt(x.value, 10); return isNaN(n) ? null : n; };
     const data = {
-      modell: fields.modell.value.trim(), art: fields.art.value, rahmen: fields.rahmen.value.trim(),
-      kMin: num(fields.kMin), kMax: num(fields.kMax), nm: num(fields.nm), wh: num(fields.wh),
+      modell: fields.modell.value.trim(), art: fields.art.value, rahmen: fields.rahmen.value,
+      // Mitgespeichert, damit die Werte auch in der Datenbank lesbar sind. Maßgeblich bleibt die Rahmengröße.
+      kMin: (RAHMEN_GROESSEN[fields.rahmen.value] || [null])[0], kMax: (RAHMEN_GROESSEN[fields.rahmen.value] || [null, null])[1],
+      nm: num(fields.nm), wh: num(fields.wh),
       schaltung: fields.schaltung.value.trim(), notiz: fields.notiz.value.trim(), foto: fotoId,
       farbe: fields.farbe.value || null,
       status: b && b.status === "verliehen" ? "verliehen" : fields.status.value,
@@ -826,7 +833,7 @@ function openBikeForm(id) {
     const problem = !data.modell ? "Bitte ein Modell eintragen."
       : !/^[A-Z0-9][A-Z0-9-]{0,11}$/.test(nr) ? "Die Inventarnummer darf nur Buchstaben, Ziffern und Minus enthalten."
       : !b && state.bikes.some((x) => x.id === nr) ? `Die Nummer ${nr} ist schon vergeben.`
-      : data.kMin && data.kMax && data.kMin > data.kMax ? "Die untere Körpergröße ist größer als die obere."
+      : !data.rahmen ? "Bitte eine Rahmengröße wählen."
       : null;
     if (problem) { err.textContent = problem; err.hidden = false; return; }
     try { await writeDoc("raeder", nr, data, false); } catch { return; }
