@@ -183,6 +183,14 @@ dialog::backdrop { background: rgba(20, 20, 18, 0.45); }
 
 /* ---------- Farben ---------- */
 .head-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+/* Fotos haben weißen Hintergrund: Fläche weiß statt grau, damit kein Rand ober- und unterhalb entsteht. */
+.pic:has(img) { background: var(--paper); }
+.ghost-tile { color: var(--ink-soft); }
+.ghost-tile .pic { background: var(--paper); border: 1px dashed var(--ink-soft); }
+.ghost-inner { display: grid; justify-items: center; gap: 0.35rem; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }
+.ghost-inner .plus { font-size: 2.75rem; font-weight: 300; line-height: 1; letter-spacing: 0; }
+.ghost-tile .bike-name, .ghost-tile .specs dd { color: var(--ink-soft); }
+.ghost-tile:hover .pic, .ghost-tile:focus-visible .pic { border-color: var(--ink); border-style: solid; color: var(--ink); }
 .readout { display: flex; align-items: center; min-height: 44px; padding: 0 0.75rem; background: var(--stone); font-size: 0.95rem; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--ink); font-variant-numeric: tabular-nums; }
 .equip { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
 .equip summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }
@@ -227,9 +235,7 @@ input[type="color"] { width: 100%; min-height: 44px; padding: 2px; background: v
         <p id="inv-sub">Alle Räder der Flotte mit den Daten, die für die Ausgabe zählen.</p>
       </div>
       <div class="head-actions">
-        <button id="colors-btn" class="btn ghost" type="button">Farben &amp; Bilder</button>
-        <button id="add-bike" class="btn" type="button" hidden>Rad hinzufügen</button>
-      </div>
+        <button id="colors-btn" class="btn ghost" type="button">Farben &amp; Bilder</button>      </div>
     </div>
 
     <div class="filters">
@@ -570,7 +576,6 @@ function renderAll() {
   const free = state.bikes.filter((b) => b.status === "verfügbar").length;
   $("#badge-inv").textContent = state.bikes.length ? `${free}/${state.bikes.length}` : "";
   $("#badge-cust").textContent = state.customers.length || "";
-  $("#add-bike").hidden = !state.canWrite;
   $("#new-cust").disabled = !state.canWrite;
   renderColorList();   // nur wenn das Fenster „Farben & Bilder“ offen ist
 }
@@ -604,11 +609,11 @@ function renderBikes() {
   $("#count").textContent = state.bikes.length ? `${list.length} von ${state.bikes.length} Rädern` : "";
 
   if (state.mode === "loading") return $("#grid").replaceChildren(el("p", { class: "empty", text: "Inventar wird geladen …" }));
+  // Leere Kachel am Ende: genau dort erscheint das nächste Rad (sortiert nach Inventarnummer).
+  // Nur ohne aktive Filter, sonst stünde sie an einer Stelle, an der das neue Rad gar nicht auftaucht.
+  const ghost = state.canWrite && !active ? ghostTile() : null;
   if (!state.bikes.length) {
-    return $("#grid").replaceChildren(el("div", { class: "empty" },
-      el("p", { text: "Noch keine Räder im Inventar. Lege das erste Rad über „Rad hinzufügen“ an, mit Rahmengröße, Körpergrößen, Drehmoment, Akku und Schaltung." }),
-      state.canWrite ? el("button", { class: "btn", type: "button", text: "Rad hinzufügen", onclick: () => openBikeForm() }) : null
-    ));
+    return $("#grid").replaceChildren(ghost || el("p", { class: "empty", text: "Noch keine Räder im Inventar." }));
   }
   if (!list.length) return $("#grid").replaceChildren(el("p", { class: "empty", text: "Kein Rad passt zu diesen Filtern. Setze einen Filter zurück, um mehr zu sehen." }));
 
@@ -618,7 +623,19 @@ function renderBikes() {
       el("div", { class: "bike-head" }, el("span", { class: "eyebrow" }, colorLabel(b) || b.art || ""), el("span", { class: "bike-name", text: b.modell })),
       specList(b)
     )
-  ));
+  ), ghost || "");
+}
+
+function ghostTile() {
+  const nr = nextBikeId();
+  return el("button", { class: "bike ghost-tile", type: "button", "aria-label": `Neues Rad ${nr} anlegen`, onclick: () => openBikeForm() },
+    el("div", { class: "pic" },
+      el("div", { class: "ghost-inner" }, el("span", { class: "plus", "aria-hidden": "true", text: "+" }), el("span", { text: "Rad hinzufügen" })),
+      el("span", { class: "invno", text: nr })
+    ),
+    el("div", { class: "bike-head" }, el("span", { class: "eyebrow", text: "Neues Rad" }), el("span", { class: "bike-name", text: STANDARD.modell })),
+    specList({})
+  );
 }
 
 function renderCustomers() {
@@ -1033,7 +1050,6 @@ function wire() {
   });
   $("#cq").addEventListener("input", renderCustomers);
   $("#c-sort").addEventListener("change", renderCustomers);
-  $("#add-bike").addEventListener("click", () => openBikeForm());
   $("#new-cust").addEventListener("click", openNewCustomer);
   for (const t of document.querySelectorAll("[role=tab]")) t.addEventListener("click", () => showTab(t.dataset.tab));
   $("#dlg").addEventListener("click", (e) => { if (e.target === $("#dlg")) closeDialog(); });
