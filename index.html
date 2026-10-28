@@ -181,6 +181,18 @@ dialog::backdrop { background: rgba(20, 20, 18, 0.45); }
 .match { font-size: 0.8rem; color: var(--ok); }
 .nomatch { font-size: 0.8rem; color: var(--busy); }
 
+/* ---------- Farben ---------- */
+.head-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.swatch { display: inline-block; width: 0.8em; height: 0.8em; margin-right: 0.45em; vertical-align: -0.05em; border-radius: 50%; background: var(--sw); border: 1px solid var(--rule); }
+.photo-block { display: grid; gap: 0.5rem; }
+.color-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 1.25rem; }
+.color-row { display: grid; grid-template-columns: minmax(0, 9rem) 1fr; gap: 1rem; align-items: center; }
+.color-row .pic { aspect-ratio: 4 / 3; }
+.color-info { display: grid; gap: 0.35rem; min-width: 0; }
+.file-btn { display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.file-btn:focus-within { outline: 2px solid var(--ink); outline-offset: 3px; }
+input[type="color"] { width: 100%; min-height: 44px; padding: 2px; background: var(--paper); border: 1px solid var(--rule); border-radius: 0; }
+
 .toast {
   position: fixed; left: 50%; transform: translateX(-50%); z-index: 20;
   bottom: calc(var(--tabbar) + 1rem + env(safe-area-inset-bottom, 0px));
@@ -207,15 +219,18 @@ dialog::backdrop { background: rgba(20, 20, 18, 0.45); }
         <h2>Inventar</h2>
         <p id="inv-sub">Alle Räder der Flotte mit den Daten, die für die Ausgabe zählen.</p>
       </div>
-      <button id="add-bike" class="btn ghost" type="button" hidden>Rad hinzufügen</button>
+      <div class="head-actions">
+        <button id="colors-btn" class="btn ghost" type="button">Farben &amp; Bilder</button>
+        <button id="add-bike" class="btn" type="button" hidden>Rad hinzufügen</button>
+      </div>
     </div>
 
     <div class="filters">
       <label class="f" for="q">Suche
         <input id="q" type="search" placeholder="Modell, Inventarnr. oder Schaltung" autocomplete="off">
       </label>
-      <label class="f" for="f-art">Bauart
-        <select id="f-art"></select>
+      <label class="f" for="f-farbe">Farbe
+        <select id="f-farbe"></select>
       </label>
       <label class="f" for="f-hoehe">Körpergröße (cm)
         <input id="f-hoehe" type="number" inputmode="numeric" min="120" max="220" placeholder="z. B. 178">
@@ -292,6 +307,14 @@ const STATI = [
 ];
 const SCHALTUNGEN = ["enviolo (stufenlos)", "Rohloff E-14", "Shimano Nexus 5", "Shimano Deore 11-fach", "Pinion C1.12"];
 const LOCAL_KEY = "fahrradverleih-lokal-v1";
+const LOCAL_LISTS = { raeder: "bikes", kunden: "customers", farben: "colors" };
+
+// Vorschläge beim Anlegen einer Farbe (Nevo5-Farben aus Händlerangaben). Eigene Namen gehen genauso.
+const FARB_VORSCHLAEGE = [
+  { name: "Slate Grey", hex: "#5b6066" },
+  { name: "Pure White", hex: "#f4f4f2" },
+  { name: "Ice Blue", hex: "#b9d3df" },
+];
 
 // Nur für die lokale Vorschau außerhalb von Claude. In der veröffentlichten Seite kommen die Räder aus der Datenbank.
 const PREVIEW_BIKES = [
@@ -306,10 +329,11 @@ const state = {
   mode: "loading",     // "live" = gemeinsame Datenbank, "local" = nur dieser Browser
   bikes: [],
   customers: [],
+  colors: [],          // Farbkatalog: { id, name, hex, foto }
   canWrite: true,
   assets: null,
 };
-const filters = { q: "", art: "", hoehe: "", schaltung: "", status: new Set() };
+const filters = { q: "", farbe: "", hoehe: "", schaltung: "", status: new Set() };
 let db = null;
 
 /* ---------- 3. Hilfsfunktionen ---------- */
@@ -341,6 +365,15 @@ function toast(msg) {
 const fmtDate = (iso) => { try { return new Date(iso).toLocaleDateString("de-DE"); } catch { return ""; } };
 const bikeName = (b) => b ? `${b.modell} · ${b.id}` : "";
 const fits = (b, h) => h && b.kMin && b.kMax ? h >= b.kMin && h <= b.kMax : null;
+
+// Farbe eines Rads und das Bild, das es zeigt: eigenes Foto, sonst das Bild seiner Farbe.
+const colorOf = (b) => state.colors.find((c) => c.id === b.farbe) || null;
+const photoOf = (b) => b.foto || (colorOf(b) || {}).foto || null;
+function swatch(hex) {
+  const safe = /^#[0-9a-f]{6}$/i.test(hex || "") ? hex : "transparent";
+  return el("span", { class: "swatch", style: `--sw:${safe}`, "aria-hidden": "true" });
+}
+const colorLabel = (b) => { const c = colorOf(b); return c ? [swatch(c.hex), c.name] : null; };
 
 // Strichzeichnung als Platzhalter, bis ein Foto hochgeladen ist.
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -378,8 +411,9 @@ function bikeDrawing(art) {
 
 function picture(b, withLabels = true) {
   const box = el("div", { class: "pic" });
-  if (b.foto) {
-    const img = el("img", { src: "/_blob/" + b.foto, alt: b.modell, loading: "lazy" });
+  const foto = photoOf(b);
+  if (foto) {
+    const img = el("img", { src: "/_blob/" + foto, alt: b.modell, loading: "lazy" });
     img.addEventListener("error", () => img.replaceWith(bikeDrawing(b.art)));
     box.append(img);
   } else box.append(bikeDrawing(b.art));
@@ -397,19 +431,20 @@ function specList(b) {
     item("Körpergröße", b.kMin && b.kMax ? `${b.kMin}–${b.kMax} cm` : "–"),
     item("Drehmoment", b.nm ? `${b.nm} Nm` : "–"),
     item("Akku", b.wh ? `${b.wh} Wh` : "–"),
-    item("Schaltung", b.schaltung || "–", true),
+    item("Schaltung", b.schaltung || "–"),
+    el("div", {}, el("dt", { text: "Farbe" }), el("dd", {}, colorLabel(b) || "–")),
   );
 }
 
 /* ---------- 4. Speicher ---------- */
 
 function saveLocal() {
-  try { localStorage.setItem(LOCAL_KEY, JSON.stringify({ bikes: state.bikes, customers: state.customers })); } catch {}
+  try { localStorage.setItem(LOCAL_KEY, JSON.stringify({ bikes: state.bikes, customers: state.customers, colors: state.colors })); } catch {}
 }
 function loadLocal() {
   try {
     const raw = localStorage.getItem(LOCAL_KEY);
-    if (raw) { const d = JSON.parse(raw); state.bikes = d.bikes || []; state.customers = d.customers || []; return; }
+    if (raw) { const d = JSON.parse(raw); state.bikes = d.bikes || []; state.customers = d.customers || []; state.colors = d.colors || []; return; }
   } catch {}
   state.bikes = PREVIEW_BIKES.map((b) => ({ ...b }));
 }
@@ -422,7 +457,7 @@ async function writeDoc(coll, id, data, merge) {
     try { merge ? await ref.update(data) : await ref.set(data); }
     catch (e) { handleWriteError(e); throw e; }
   } else {
-    const list = coll === "raeder" ? state.bikes : state.customers;
+    const list = state[LOCAL_LISTS[coll]];
     const i = list.findIndex((x) => x.id === id);
     if (i >= 0) list[i] = merge ? { ...list[i], ...data, id } : { ...data, id };
     else list.push({ ...data, id });
@@ -433,7 +468,7 @@ async function deleteDoc(coll, id) {
   if (state.mode === "live") {
     try { await db.collection(coll).doc(id).delete(); } catch (e) { handleWriteError(e); throw e; }
   } else {
-    const key = coll === "raeder" ? "bikes" : "customers";
+    const key = LOCAL_LISTS[coll];
     state[key] = state[key].filter((x) => x.id !== id);
     saveLocal(); renderAll();
   }
@@ -479,11 +514,11 @@ function visibleBikes() {
   const q = filters.q.trim().toLowerCase();
   const h = parseInt(filters.hoehe, 10);
   return state.bikes.filter((b) => {
-    if (filters.art && b.art !== filters.art) return false;
+    if (filters.farbe && b.farbe !== filters.farbe) return false;
     if (filters.schaltung && b.schaltung !== filters.schaltung) return false;
     if (filters.status.size && !filters.status.has(b.status)) return false;
     if (h && fits(b, h) === false) return false;
-    if (q && ![b.id, b.modell, b.art, b.schaltung, b.rahmen].join(" ").toLowerCase().includes(q)) return false;
+    if (q && ![b.id, b.modell, b.art, b.schaltung, b.rahmen, (colorOf(b) || {}).name].join(" ").toLowerCase().includes(q)) return false;
     return true;
   }).sort((a, b) => String(a.id).localeCompare(String(b.id), "de", { numeric: true }));
 }
@@ -499,6 +534,7 @@ function renderAll() {
   $("#badge-cust").textContent = state.customers.length || "";
   $("#add-bike").hidden = !state.canWrite;
   $("#new-cust").disabled = !state.canWrite;
+  renderColorList();   // nur wenn das Fenster „Farben & Bilder“ offen ist
 }
 
 function renderFilterOptions() {
@@ -506,8 +542,12 @@ function renderFilterOptions() {
     sel.replaceChildren(el("option", { value: "", text: first }), ...values.map((v) => el("option", { value: v, text: v })));
     sel.value = values.includes(current) ? current : "";
   };
-  const arten = ARTEN.filter((a) => state.bikes.some((b) => b.art === a));
-  fill($("#f-art"), "Alle Bauarten", arten, filters.art);
+  const farbSel = $("#f-farbe");
+  farbSel.replaceChildren(
+    el("option", { value: "", text: "Alle Farben" }),
+    ...[...state.colors].sort((a, b) => a.name.localeCompare(b.name, "de")).map((c) => el("option", { value: c.id, text: c.name }))
+  );
+  farbSel.value = state.colors.some((c) => c.id === filters.farbe) ? filters.farbe : "";
   const sch = [...new Set(state.bikes.map((b) => b.schaltung).filter(Boolean))].sort((a, b) => a.localeCompare(b, "de"));
   fill($("#f-schaltung"), "Alle Schaltungen", sch, filters.schaltung);
 
@@ -521,7 +561,7 @@ function renderFilterOptions() {
 
 function renderBikes() {
   const list = visibleBikes();
-  const active = filters.q || filters.art || filters.hoehe || filters.schaltung || filters.status.size;
+  const active = filters.q || filters.farbe || filters.hoehe || filters.schaltung || filters.status.size;
   $("#reset").hidden = !active;
   $("#count").textContent = state.bikes.length ? `${list.length} von ${state.bikes.length} Rädern` : "";
 
@@ -537,7 +577,7 @@ function renderBikes() {
   $("#grid").replaceChildren(...list.map((b) =>
     el("button", { class: "bike", type: "button", "aria-label": `${b.modell}, ${b.id}: Details öffnen`, onclick: () => openBike(b.id) },
       picture(b),
-      el("div", { class: "bike-head" }, el("span", { class: "eyebrow", text: b.art || "" }), el("span", { class: "bike-name", text: b.modell })),
+      el("div", { class: "bike-head" }, el("span", { class: "eyebrow" }, colorLabel(b) || b.art || ""), el("span", { class: "bike-name", text: b.modell })),
       specList(b)
     )
   ));
@@ -649,7 +689,10 @@ function openBike(id) {
 
 function openBikeForm(id) {
   const b = id ? state.bikes.find((x) => x.id === id) : null;
-  const v = b || { id: nextBikeId(), art: "Trekking", status: "verfügbar", schaltung: SCHALTUNGEN[0] };
+  const v = b || {
+    id: nextBikeId(), modell: "Nevo5 vario", art: "Tiefeinsteiger", nm: 85, status: "verfügbar", schaltung: SCHALTUNGEN[0],
+    farbe: state.colors.length === 1 ? state.colors[0].id : "",
+  };
   let fotoId = v.foto || null;
 
   const inp = (fid, type, value, extra = {}) => el("input", { id: fid, type, value: value ?? "", ...extra });
@@ -671,38 +714,51 @@ function openBikeForm(id) {
     wh: inp("bf-wh", "number", v.wh, { min: 0, max: 3000, inputmode: "numeric" }),
     schaltung: inp("bf-schaltung", "text", v.schaltung, { list: "schaltungen", maxlength: 40 }),
     status: sel("bf-status", STATI.filter((s) => b ? true : s.key !== "verliehen"), v.status),
+    farbe: sel("bf-farbe", [{ key: "", label: state.colors.length ? "Farbe wählen" : "Noch keine Farben angelegt" },
+      ...[...state.colors].sort((a, c) => a.name.localeCompare(c.name, "de")).map((c) => ({ key: c.id, label: c.name }))], v.farbe || ""),
     notiz: el("textarea", { id: "bf-notiz", maxlength: 300, placeholder: "z. B. Kindersitz montiert" }),
   };
   fields.notiz.value = v.notiz || "";
   if (b && b.status === "verliehen") fields.status.disabled = true;
 
-  // Foto-Upload: nur für Personen, die die Seite bearbeiten dürfen.
-  let fotoBlock = null;
+  // Bild: kommt automatisch aus der gewählten Farbe. Ein eigenes Foto pro Rad ist optional und hat Vorrang.
+  const preview = el("div", { class: "pic" });
+  const previewHint = el("p", { class: "hint" });
+  const clearOwn = el("button", { class: "link", type: "button", text: "Eigenes Foto entfernen und Farbbild nutzen", onclick: () => { fotoId = null; showPreview(); } });
+  const showPreview = () => {
+    const c = state.colors.find((x) => x.id === fields.farbe.value);
+    const src = fotoId || (c && c.foto);
+    preview.replaceChildren(src ? el("img", { src: "/_blob/" + src, alt: "" }) : bikeDrawing(fields.art.value));
+    previewHint.textContent = fotoId ? "Dieses Rad zeigt ein eigenes Foto."
+      : c && c.foto ? `Bild der Farbe ${c.name}, wird automatisch übernommen.`
+      : c ? `Für ${c.name} ist noch kein Bild hinterlegt. Lade es unter „Farben & Bilder“ hoch.`
+      : "Wähle eine Farbe, dann erscheint das passende Bild.";
+    clearOwn.hidden = !fotoId;
+  };
+  fields.farbe.addEventListener("change", showPreview);
+  fields.art.addEventListener("change", showPreview);
+  let ownPhotoField = null;
   if (state.assets) {
-    const preview = el("div", { class: "pic" });
-    const showPreview = () => preview.replaceChildren(fotoId ? el("img", { src: "/_blob/" + fotoId, alt: "" }) : bikeDrawing(fields.art.value));
-    showPreview();
     const file = el("input", { id: "bf-foto", type: "file", accept: "image/png,image/jpeg,image/webp" });
     file.addEventListener("change", async () => {
-      const f = file.files && file.files[0];
-      if (!f) return;
-      toast("Foto wird hochgeladen …");
-      try { const r = await state.assets.upload(f); fotoId = r.id; showPreview(); toast("Foto hochgeladen."); }
-      catch (e) { toast(e && e.code === "too_large" ? "Das Foto ist größer als 20 MB." : e && e.code === "unsupported_type" ? "Bitte ein JPG-, PNG- oder WebP-Foto wählen." : "Upload hat nicht geklappt."); }
+      const id = await uploadPhoto(file.files && file.files[0]);
+      if (id) { fotoId = id; showPreview(); }
     });
-    fotoBlock = el("div", { class: "full", style: null }, preview, field("Foto", file, true));
+    ownPhotoField = field("Eigenes Foto (optional, statt Farbbild)", file, true);
   }
+  const fotoBlock = el("div", { class: "full photo-block" }, preview, previewHint, clearOwn, ownPhotoField);
+  showPreview();
 
   const err = el("p", { class: "nomatch", hidden: true });
   const form = el("form", { class: "form-grid", novalidate: true },
-    field("Inventarnr.", fields.nr), field("Bauart", fields.art),
+    field("Inventarnr.", fields.nr), field("Farbe", fields.farbe),
+    fotoBlock,
     field("Modell", fields.modell, true),
     field("Rahmengröße", fields.rahmen), field("Status", fields.status),
     field("Körpergröße von (cm)", fields.kMin), field("bis (cm)", fields.kMax),
     field("Drehmoment (Nm)", fields.nm), field("Akku (Wh)", fields.wh),
-    field("Schaltung", fields.schaltung, true),
+    field("Schaltung", fields.schaltung), field("Bauart", fields.art),
     el("datalist", { id: "schaltungen" }, ...schList.map((s) => el("option", { value: s }))),
-    fotoBlock,
     field("Notiz", fields.notiz, true),
     err,
     el("div", { class: "actions full" },
@@ -718,6 +774,7 @@ function openBikeForm(id) {
       modell: fields.modell.value.trim(), art: fields.art.value, rahmen: fields.rahmen.value.trim(),
       kMin: num(fields.kMin), kMax: num(fields.kMax), nm: num(fields.nm), wh: num(fields.wh),
       schaltung: fields.schaltung.value.trim(), notiz: fields.notiz.value.trim(), foto: fotoId,
+      farbe: fields.farbe.value || null,
       status: b && b.status === "verliehen" ? "verliehen" : fields.status.value,
       kunde: b ? b.kunde ?? null : null, seit: b ? b.seit ?? null : null,
     };
@@ -812,6 +869,95 @@ function openCustomer(id) {
   );
 }
 
+/* ----- Farben & Bilder ----- */
+
+// Lädt ein Bild hoch und gibt die Asset-ID zurück (oder null bei Fehler).
+async function uploadPhoto(f) {
+  if (!f || !state.assets) return null;
+  toast("Bild wird hochgeladen …");
+  try { const r = await state.assets.upload(f); toast("Bild hochgeladen."); return r.id; }
+  catch (e) {
+    toast(e && e.code === "too_large" ? "Das Bild ist größer als 20 MB."
+      : e && e.code === "unsupported_type" ? "Bitte ein JPG-, PNG- oder WebP-Bild wählen."
+      : "Upload hat nicht geklappt. Versuch es gleich noch einmal.");
+    return null;
+  }
+}
+
+const labeled = (label, control, full) => el("label", { class: "f" + (full ? " full" : ""), for: control.id }, label, control);
+const slug = (s) => s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+
+function renderColorList() {
+  const list = $("#color-list");
+  if (!list) return;
+  if (!state.colors.length) {
+    return list.replaceChildren(el("li", { class: "hint", text: "Noch keine Farben angelegt. Lege unten die erste Farbe an, zum Beispiel Slate Grey." }));
+  }
+  list.replaceChildren(...[...state.colors].sort((a, b) => a.name.localeCompare(b.name, "de")).map((c) => {
+    const used = state.bikes.filter((b) => b.farbe === c.id).length;
+    let upload = null;
+    if (state.assets && state.canWrite) {
+      const file = el("input", { id: "cf-file-" + c.id, type: "file", accept: "image/png,image/jpeg,image/webp", class: "sr-only" });
+      file.addEventListener("change", async () => {
+        const id = await uploadPhoto(file.files && file.files[0]);
+        if (!id) return;
+        try { await writeDoc("farben", c.id, { foto: id }, true); } catch { return; }
+        toast(`Bild für ${c.name} gespeichert. Alle Räder dieser Farbe zeigen es jetzt.`);
+      });
+      upload = el("label", { class: "btn ghost file-btn", for: file.id }, c.foto ? "Bild ersetzen" : "Bild hochladen", file);
+    }
+    return el("li", { class: "color-row" },
+      el("div", { class: "pic" }, c.foto ? el("img", { src: "/_blob/" + c.foto, alt: c.name, loading: "lazy" }) : bikeDrawing("Tiefeinsteiger")),
+      el("div", { class: "color-info" },
+        el("span", { class: "bike-name" }, swatch(c.hex), c.name),
+        el("span", { class: "hint", text: `${used} ${used === 1 ? "Rad" : "Räder"} in dieser Farbe${c.foto ? "" : " · noch kein Bild"}` }),
+        state.canWrite ? el("div", { class: "actions" },
+          upload,
+          used ? null : armedButton("Löschen", "Wirklich löschen?", async () => { await deleteDoc("farben", c.id); toast(`${c.name} gelöscht.`); })
+        ) : null
+      )
+    );
+  }));
+}
+
+function openColors() {
+  const name = el("input", { id: "cf-name", type: "text", maxlength: 40, list: "farb-vorschlaege", placeholder: "z. B. Slate Grey", autocomplete: "off" });
+  const hex = el("input", { id: "cf-hex", type: "color", value: FARB_VORSCHLAEGE[0].hex });
+  name.addEventListener("input", () => {
+    const s = FARB_VORSCHLAEGE.find((x) => x.name.toLowerCase() === name.value.trim().toLowerCase());
+    if (s) hex.value = s.hex;
+  });
+  const err = el("p", { class: "nomatch full", hidden: true });
+  const form = el("form", { class: "form-grid", novalidate: true },
+    labeled("Neue Farbe", name), labeled("Farbton für die Markierung", hex),
+    el("datalist", { id: "farb-vorschlaege" }, ...FARB_VORSCHLAEGE.map((s) => el("option", { value: s.name }))),
+    err,
+    el("div", { class: "actions full" }, el("button", { class: "btn", type: "submit", text: "Farbe anlegen" }))
+  );
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const n = name.value.trim();
+    const id = slug(n) || "farbe-" + Date.now();
+    const problem = !n ? "Bitte einen Farbnamen eintragen."
+      : state.colors.some((c) => c.id === id || c.name.toLowerCase() === n.toLowerCase()) ? `${n} gibt es schon.` : null;
+    if (problem) { err.textContent = problem; err.hidden = false; return; }
+    err.hidden = true;
+    try { await writeDoc("farben", id, { name: n, hex: hex.value, foto: null }, false); } catch { return; }
+    name.value = "";
+    toast(`${n} angelegt.${state.assets ? " Jetzt noch ein Bild hochladen." : ""}`);
+  });
+
+  openDialog(
+    dlgHead("Inventar", "Farben & Bilder"),
+    el("p", { class: "hint", text: "Lege jede Farbe einmal mit Bild an. Jedes Rad in dieser Farbe zeigt dann automatisch dieses Bild, auch neue Räder." }),
+    state.mode === "local" ? el("p", { class: "note", text: "In der lokalen Vorschau lassen sich keine Bilder hochladen. Das geht in der veröffentlichten Version in Claude." })
+      : !state.assets && state.canWrite ? el("p", { class: "note", text: "Bilder hochladen können nur Personen, die die Seite bearbeiten dürfen." }) : null,
+    el("ul", { id: "color-list", class: "color-list" }),
+    state.canWrite ? form : null
+  );
+  renderColorList();
+}
+
 function showTab(name) {
   for (const t of document.querySelectorAll("[role=tab]")) t.setAttribute("aria-selected", String(t.dataset.tab === name));
   $("#view-inventar").hidden = name !== "inventar";
@@ -824,11 +970,12 @@ function showTab(name) {
 
 function wire() {
   $("#q").addEventListener("input", (e) => { filters.q = e.target.value; renderBikes(); });
-  $("#f-art").addEventListener("change", (e) => { filters.art = e.target.value; renderBikes(); });
+  $("#f-farbe").addEventListener("change", (e) => { filters.farbe = e.target.value; renderBikes(); });
+  $("#colors-btn").addEventListener("click", openColors);
   $("#f-schaltung").addEventListener("change", (e) => { filters.schaltung = e.target.value; renderBikes(); });
   $("#f-hoehe").addEventListener("input", (e) => { filters.hoehe = e.target.value; renderBikes(); });
   $("#reset").addEventListener("click", () => {
-    Object.assign(filters, { q: "", art: "", hoehe: "", schaltung: "", status: new Set() });
+    Object.assign(filters, { q: "", farbe: "", hoehe: "", schaltung: "", status: new Set() });
     $("#q").value = ""; $("#f-hoehe").value = "";
     renderFilterOptions(); renderBikes();
   });
@@ -864,7 +1011,7 @@ async function boot() {
   }).catch(() => {});
 
   let loaded = 0;
-  const done = () => { if (++loaded >= 2) renderAll(); else if (loaded === 1) {} };
+  const done = () => { if (++loaded >= 3) renderAll(); };
   const onErr = () => { $("#mode").textContent = "Verbindung unterbrochen · lade die Seite neu"; };
   let firstR = true, firstK = true;
   db.collection("raeder").onSnapshot((s) => {
@@ -874,6 +1021,11 @@ async function boot() {
   db.collection("kunden").onSnapshot((s) => {
     state.customers = s.docs.map((d) => ({ ...d.data(), id: d.id }));
     if (firstK) { firstK = false; done(); } else renderAll();
+  }, onErr);
+  let firstF = true;
+  db.collection("farben").onSnapshot((s) => {
+    state.colors = s.docs.map((d) => ({ ...d.data(), id: d.id }));
+    if (firstF) { firstF = false; done(); } else renderAll();
   }, onErr);
 }
 
