@@ -183,6 +183,12 @@ dialog::backdrop { background: rgba(20, 20, 18, 0.45); }
 
 /* ---------- Farben ---------- */
 .head-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.equip { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.equip summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }
+.equip dl { margin: 0 0 0.75rem; display: grid; gap: 0.35rem; }
+.equip dl div { display: grid; grid-template-columns: 7.5rem 1fr; gap: 0.75rem; min-width: 0; }
+.equip dt { color: var(--ink-soft); font-size: 0.85rem; }
+.equip dd { margin: 0; font-size: 0.9rem; overflow-wrap: anywhere; }
 .swatch { display: inline-block; width: 0.8em; height: 0.8em; margin-right: 0.45em; vertical-align: -0.05em; border-radius: 50%; background: var(--sw); border: 1px solid var(--rule); }
 .photo-block { display: grid; gap: 0.5rem; }
 .color-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 1.25rem; }
@@ -305,15 +311,43 @@ const STATI = [
   { key: "verliehen", label: "Verliehen" },
   { key: "werkstatt", label: "Werkstatt" },
 ];
-const SCHALTUNGEN = ["enviolo (stufenlos)", "Rohloff E-14", "Shimano Nexus 5", "Shimano Deore 11-fach", "Pinion C1.12"];
+const SCHALTUNGEN = ["Shimano Nexus 5", "enviolo (stufenlos)", "Rohloff E-14", "Pinion C1.12"];
 const LOCAL_KEY = "fahrradverleih-lokal-v1";
 const LOCAL_LISTS = { raeder: "bikes", kunden: "customers", farben: "colors" };
 
-// Vorschläge beim Anlegen einer Farbe (Nevo5-Farben aus Händlerangaben). Eigene Namen gehen genauso.
+// Vorschläge beim Anlegen einer Farbe: die vier Rahmenfarben des Nevo5 silent CORE. Eigene Namen gehen genauso.
 const FARB_VORSCHLAEGE = [
-  { name: "Slate Grey", hex: "#5b6066" },
-  { name: "Pure White", hex: "#f4f4f2" },
   { name: "Ice Blue", hex: "#b9d3df" },
+  { name: "Pure White", hex: "#f4f4f2" },
+  { name: "Ruby Red", hex: "#8e1f2c" },
+  { name: "Slate Grey", hex: "#5b6066" },
+];
+
+// Standardausstattung für neue Räder, nach der Konfiguration F01810_01131410 (Nevo5 silent CORE).
+const STANDARD = {
+  modell: "Nevo5 silent CORE", art: "Tiefeinsteiger", rahmen: "L",
+  nm: 75, wh: 540, schaltung: "Shimano Nexus 5",
+};
+
+// Körpergrößen je Rahmengröße laut Riese & Müller Größentabelle (Nevo5).
+const RAHMEN_GROESSEN = { S: [155, 170], M: [165, 180], L: [175, 190], XL: [185, 210] };
+
+// Komponenten laut Konfiguration. Wird bei Rädern angezeigt, deren Modell „silent CORE“ enthält.
+const AUSSTATTUNG = [
+  ["Motor", "Bosch Performance Line, 25 km/h"],
+  ["Display", "Bosch Purion 200"],
+  ["Akku", "Bosch PowerTube 540 Wh, horizontal"],
+  ["Schaltung", "Shimano Nexus Inter-5E, Drehgriff"],
+  ["Antrieb", "Gates Riemen CDC, Riemenschutzring"],
+  ["Bremsen", "Shimano MT200, Scheibe"],
+  ["Federgabel", "SR Suntour Mobie 34, 100 mm"],
+  ["Laufräder", "Rodi Tryp35 Evo 27,5\""],
+  ["Reifen", "Schwalbe Motion Super Moto-X 62-584 Reflex"],
+  ["Licht", "Supernova mini 2 · Axa Juno Signal LED"],
+  ["Gepäckträger", "Riese & Müller MIK"],
+  ["Schloss", "Trelock RS561 Rahmenschloss + Kette 150 cm"],
+  ["Ständer", "Ursus R97 Invisible Connect"],
+  ["Sattel", "Selle Royal Essenza Moderate"],
 ];
 
 // Nur für die lokale Vorschau außerhalb von Claude. In der veröffentlichten Seite kommen die Räder aus der Datenbank.
@@ -678,6 +712,10 @@ function openBike(id) {
     dlgHead(`${b.art || "Rad"} · ${b.id}`, b.modell),
     picture(b),
     specList(b),
+    /silent\s*core/i.test(b.modell || "") ? el("details", { class: "equip" },
+      el("summary", { text: "Standardausstattung" }),
+      el("dl", {}, ...AUSSTATTUNG.map(([k, val]) => el("div", {}, el("dt", { text: k }), el("dd", { text: val }))))
+    ) : null,
     b.notiz ? el("p", { class: "hint", text: b.notiz }) : null,
     rental,
     state.canWrite ? el("div", { class: "actions" },
@@ -690,7 +728,7 @@ function openBike(id) {
 function openBikeForm(id) {
   const b = id ? state.bikes.find((x) => x.id === id) : null;
   const v = b || {
-    id: nextBikeId(), modell: "Nevo5 vario", art: "Tiefeinsteiger", nm: 85, status: "verfügbar", schaltung: SCHALTUNGEN[0],
+    id: nextBikeId(), ...STANDARD, kMin: RAHMEN_GROESSEN[STANDARD.rahmen][0], kMax: RAHMEN_GROESSEN[STANDARD.rahmen][1], status: "verfügbar",
     farbe: state.colors.length === 1 ? state.colors[0].id : "",
   };
   let fotoId = v.foto || null;
@@ -707,7 +745,7 @@ function openBikeForm(id) {
     nr: inp("bf-nr", "text", v.id, b ? { readonly: true } : { maxlength: 12 }),
     modell: inp("bf-modell", "text", v.modell, { maxlength: 60, placeholder: "z. B. Nevo5 vario", required: true }),
     art: sel("bf-art", ARTEN, v.art),
-    rahmen: inp("bf-rahmen", "text", v.rahmen, { maxlength: 20, placeholder: "z. B. 51 cm" }),
+    rahmen: inp("bf-rahmen", "text", v.rahmen, { maxlength: 20, placeholder: "S, M, L oder XL", list: "rahmengroessen" }),
     kMin: inp("bf-kmin", "number", v.kMin, { min: 120, max: 220, inputmode: "numeric" }),
     kMax: inp("bf-kmax", "number", v.kMax, { min: 120, max: 220, inputmode: "numeric" }),
     nm: inp("bf-nm", "number", v.nm, { min: 0, max: 200, inputmode: "numeric" }),
@@ -719,6 +757,12 @@ function openBikeForm(id) {
     notiz: el("textarea", { id: "bf-notiz", maxlength: 300, placeholder: "z. B. Kindersitz montiert" }),
   };
   fields.notiz.value = v.notiz || "";
+  // Rahmengröße wählen trägt die passenden Körpergrößen gleich mit ein.
+  fields.rahmen.addEventListener("change", () => {
+    const key = fields.rahmen.value.trim().toUpperCase();
+    const p = RAHMEN_GROESSEN[key];
+    if (p) { fields.rahmen.value = key; fields.kMin.value = p[0]; fields.kMax.value = p[1]; }
+  });
   if (b && b.status === "verliehen") fields.status.disabled = true;
 
   // Bild: kommt automatisch aus der gewählten Farbe. Ein eigenes Foto pro Rad ist optional und hat Vorrang.
@@ -759,6 +803,7 @@ function openBikeForm(id) {
     field("Drehmoment (Nm)", fields.nm), field("Akku (Wh)", fields.wh),
     field("Schaltung", fields.schaltung), field("Bauart", fields.art),
     el("datalist", { id: "schaltungen" }, ...schList.map((s) => el("option", { value: s }))),
+    el("datalist", { id: "rahmengroessen" }, ...Object.entries(RAHMEN_GROESSEN).map(([k, [a, z]]) => el("option", { value: k, label: `${a}–${z} cm` }))),
     field("Notiz", fields.notiz, true),
     err,
     el("div", { class: "actions full" },
