@@ -102,7 +102,15 @@ textarea { resize: vertical; min-height: 5rem; }
 
 /* ---------- Radkarten ---------- */
 .grid { display: grid; gap: 2.5rem 1.5rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 17.5rem), 1fr)); }
-.bike { display: grid; gap: 0.9rem; background: none; border: 0; padding: 0; text-align: left; color: var(--ink); }
+.bike { display: grid; gap: 0.9rem; background: none; border: 0; padding: 0; text-align: left; color: var(--ink); cursor: pointer; min-width: 0; }
+/* Alle Kacheln einer Reihe teilen sich dieselben Zeilen: Bild, Hinweis, Name und die drei Datenzeilen.
+   So liegen die Trennstriche überall auf gleicher Höhe und jedes Feld ist so hoch wie das höchste der Reihe. */
+@supports (grid-template-rows: subgrid) {
+  .bike { grid-row: span 6; grid-template-rows: subgrid; row-gap: 0; }
+  .bike > .pic-note { margin: 0; padding-top: 0.4rem; }
+  .bike > .bike-head { padding-block: 0.9rem; }
+  .specs { grid-row: span 3; grid-template-rows: subgrid; row-gap: 0; }
+}
 .bike:hover .pic svg, .bike:hover .pic img { transform: scale(1.025); }
 .pic { position: relative; aspect-ratio: 4 / 3; max-width: 100%; background: var(--stone); overflow: hidden; display: grid; place-items: center; }
 .pic svg { width: 82%; height: auto; color: var(--ink); transition: transform 0.4s ease; }
@@ -638,22 +646,34 @@ function renderBikes() {
   if (!list.length) return $("#grid").replaceChildren(el("p", { class: "empty", text: "Kein Rad passt zu diesen Filtern. Setze einen Filter zurück, um mehr zu sehen." }));
 
   $("#grid").replaceChildren(...list.map((b) =>
-    el("button", { class: "bike", type: "button", "aria-label": `${b.modell}, ${b.id}: Details öffnen`, onclick: () => openBike(b.id) },
+    tile("bike", `${b.modell}, ${b.id}: Details öffnen`, () => openBike(b.id),
       picture(b),
-      photoNote(b),
+      photoNote(b) || emptyNote(),
       el("div", { class: "bike-head" }, el("span", { class: "eyebrow" }, colorLabel(b) || b.art || ""), el("span", { class: "bike-name", text: b.modell })),
       specList(b)
     )
   ), ghost || "");
 }
 
+// Kachel als <div role="button">: so lassen sich die Zeilen aller Kacheln per Subgrid auf eine Höhe bringen.
+function tile(cls, label, onOpen, ...children) {
+  return el("div", {
+    class: cls, role: "button", tabindex: "0", "aria-label": label,
+    onclick: () => onOpen(),
+    onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } },
+  }, ...children);
+}
+// Leerer Platzhalter, damit jede Kachel gleich viele Zeilen hat.
+const emptyNote = () => el("p", { class: "pic-note", "aria-hidden": "true" });
+
 function ghostTile() {
   const nr = nextBikeId();
-  return el("button", { class: "bike ghost-tile", type: "button", "aria-label": `Neues Rad ${nr} anlegen`, onclick: () => openBikeForm() },
+  return tile("bike ghost-tile", `Neues Rad ${nr} anlegen`, () => openBikeForm(),
     el("div", { class: "pic" },
       el("div", { class: "ghost-inner" }, el("span", { class: "plus", "aria-hidden": "true", text: "+" }), el("span", { text: "Rad hinzufügen" })),
       el("span", { class: "invno", text: nr })
     ),
+    emptyNote(),
     el("div", { class: "bike-head" }, el("span", { class: "eyebrow", text: "Neues Rad" }), el("span", { class: "bike-name", text: STANDARD.modell })),
     specList({})
   );
