@@ -318,7 +318,18 @@ const STATI = [
   { key: "verliehen", label: "Verliehen" },
   { key: "werkstatt", label: "Werkstatt" },
 ];
-const SCHALTUNGEN = ["Shimano Nexus 5", "enviolo (stufenlos)", "Rohloff E-14", "Pinion C1.12"];
+// Modelle im Verleih. Drehmoment, Akku und Schaltung folgen fest aus dem Modell und sind nicht einzeln wählbar.
+const MODELLE = {
+  "Nevo5 Silent Core":           { nm: 75, wh: 540, schaltung: "Shimano Nexus 5-Gang" },
+  "Nevo5 Silent Core Rücktritt": { nm: 75, wh: 540, schaltung: "Shimano Nexus 5-Gang mit Rücktritt" },
+  "Nevo5 Vario Core":            { nm: 90, wh: 720, schaltung: "enviolo Nabenschaltung (stufenlos)" },
+};
+// Findet das Modell auch bei abweichender Schreibweise (z. B. „Nevo5 silent CORE“ aus älteren Einträgen).
+const modelKey = (name) => Object.keys(MODELLE).find((k) => k.toLowerCase() === String(name || "").trim().toLowerCase()) || null;
+const specOf = (b) => MODELLE[modelKey(b.modell)] || b;   // ältere Einträge ohne bekanntes Modell nutzen ihre gespeicherten Werte
+const nmOf = (b) => specOf(b).nm;
+const whOf = (b) => specOf(b).wh;
+const schaltungOf = (b) => specOf(b).schaltung;
 const LOCAL_KEY = "fahrradverleih-lokal-v1";
 const LOCAL_LISTS = { raeder: "bikes", kunden: "customers", farben: "colors" };
 
@@ -332,14 +343,13 @@ const FARB_VORSCHLAEGE = [
 
 // Standardausstattung für neue Räder, nach der Konfiguration F01810_01131410 (Nevo5 silent CORE).
 const STANDARD = {
-  modell: "Nevo5 silent CORE", art: "Tiefeinsteiger", rahmen: "L",
-  nm: 75, wh: 540, schaltung: "Shimano Nexus 5",
+  modell: "Nevo5 Silent Core", art: "Tiefeinsteiger", rahmen: "L",
 };
 
 // Körpergrößen je Rahmengröße laut Riese & Müller Größentabelle (Nevo5).
 const RAHMEN_GROESSEN = { S: [155, 170], M: [165, 180], L: [175, 190], XL: [185, 210] };
 
-// Komponenten laut Konfiguration. Wird bei Rädern angezeigt, deren Modell „silent CORE“ enthält.
+// Komponenten laut Konfiguration. Wird nur beim Modell „Nevo5 Silent Core“ angezeigt.
 const AUSSTATTUNG = [
   ["Motor", "Bosch Performance Line, 25 km/h"],
   ["Display", "Bosch Purion 200"],
@@ -473,9 +483,9 @@ function specList(b) {
   return el("dl", { class: "specs" },
     item("Rahmen", b.rahmen || "–"),
     item("Körpergröße", rangeText(bodyRange(b))),
-    item("Drehmoment", b.nm ? `${b.nm} Nm` : "–"),
-    item("Akku", b.wh ? `${b.wh} Wh` : "–"),
-    item("Schaltung", b.schaltung || "–"),
+    item("Drehmoment", nmOf(b) ? `${nmOf(b)} Nm` : "–"),
+    item("Akku", whOf(b) ? `${whOf(b)} Wh` : "–"),
+    item("Schaltung", schaltungOf(b) || "–"),
     el("div", {}, el("dt", { text: "Farbe" }), el("dd", {}, colorLabel(b) || "–")),
   );
 }
@@ -559,10 +569,10 @@ function visibleBikes() {
   const h = parseInt(filters.hoehe, 10);
   return state.bikes.filter((b) => {
     if (filters.farbe && b.farbe !== filters.farbe) return false;
-    if (filters.schaltung && b.schaltung !== filters.schaltung) return false;
+    if (filters.schaltung && schaltungOf(b) !== filters.schaltung) return false;
     if (filters.status.size && !filters.status.has(b.status)) return false;
     if (h && fits(b, h) === false) return false;
-    if (q && ![b.id, b.modell, b.art, b.schaltung, b.rahmen, (colorOf(b) || {}).name].join(" ").toLowerCase().includes(q)) return false;
+    if (q && ![b.id, b.modell, b.art, schaltungOf(b), b.rahmen, (colorOf(b) || {}).name].join(" ").toLowerCase().includes(q)) return false;
     return true;
   }).sort((a, b) => String(a.id).localeCompare(String(b.id), "de", { numeric: true }));
 }
@@ -591,7 +601,7 @@ function renderFilterOptions() {
     ...[...state.colors].sort((a, b) => a.name.localeCompare(b.name, "de")).map((c) => el("option", { value: c.id, text: c.name }))
   );
   farbSel.value = state.colors.some((c) => c.id === filters.farbe) ? filters.farbe : "";
-  const sch = [...new Set(state.bikes.map((b) => b.schaltung).filter(Boolean))].sort((a, b) => a.localeCompare(b, "de"));
+  const sch = [...new Set(state.bikes.map(schaltungOf).filter(Boolean))].sort((a, b) => a.localeCompare(b, "de"));
   fill($("#f-schaltung"), "Alle Schaltungen", sch, filters.schaltung);
 
   $("#status-chips").replaceChildren(...STATI.map((s) =>
@@ -733,7 +743,7 @@ function openBike(id) {
     dlgHead(`${b.art || "Rad"} · ${b.id}`, b.modell),
     picture(b),
     specList(b),
-    /silent\s*core/i.test(b.modell || "") ? el("details", { class: "equip" },
+    modelKey(b.modell) === "Nevo5 Silent Core" ? el("details", { class: "equip" },
       el("summary", { text: "Standardausstattung" }),
       el("dl", {}, ...AUSSTATTUNG.map(([k, val]) => el("div", {}, el("dt", { text: k }), el("dd", { text: val }))))
     ) : null,
@@ -761,17 +771,16 @@ function openBikeForm(id) {
   };
   const field = (label, control, full) => el("label", { class: "f" + (full ? " full" : ""), for: control.id }, label, control);
 
-  const schList = [...new Set([...SCHALTUNGEN, ...state.bikes.map((x) => x.schaltung).filter(Boolean)])];
   const fields = {
     nr: inp("bf-nr", "text", v.id, b ? { readonly: true } : { maxlength: 12 }),
-    modell: inp("bf-modell", "text", v.modell, { maxlength: 60, placeholder: "z. B. Nevo5 vario", required: true }),
+    modell: sel("bf-modell", [{ key: "", label: "Modell wählen" }, ...Object.keys(MODELLE)], modelKey(v.modell) || ""),
     art: sel("bf-art", ARTEN, v.art),
     rahmen: sel("bf-rahmen", [{ key: "", label: "Rahmengröße wählen" },
       ...Object.keys(RAHMEN_GROESSEN).map((k) => ({ key: k, label: k }))], RAHMEN_GROESSEN[v.rahmen] ? v.rahmen : ""),
     koerper: el("output", { id: "bf-koerper", class: "readout", for: "bf-rahmen" }),
-    nm: inp("bf-nm", "number", v.nm, { min: 0, max: 200, inputmode: "numeric" }),
-    wh: inp("bf-wh", "number", v.wh, { min: 0, max: 3000, inputmode: "numeric" }),
-    schaltung: inp("bf-schaltung", "text", v.schaltung, { list: "schaltungen", maxlength: 40 }),
+    nm: el("output", { id: "bf-nm", class: "readout", for: "bf-modell" }),
+    wh: el("output", { id: "bf-wh", class: "readout", for: "bf-modell" }),
+    schaltung: el("output", { id: "bf-schaltung", class: "readout", for: "bf-modell" }),
     status: sel("bf-status", STATI.filter((s) => b ? true : s.key !== "verliehen"), v.status),
     farbe: sel("bf-farbe", [{ key: "", label: state.colors.length ? "Farbe wählen" : "Noch keine Farben angelegt" },
       ...[...state.colors].sort((a, c) => a.name.localeCompare(c.name, "de")).map((c) => ({ key: c.id, label: c.name }))], v.farbe || ""),
@@ -786,6 +795,16 @@ function openBikeForm(id) {
   };
   fields.rahmen.addEventListener("change", showKoerper);
   showKoerper();
+  // Drehmoment, Akku und Schaltung werden nur angezeigt: sie folgen aus dem Modell.
+  const showModell = () => {
+    const m = MODELLE[fields.modell.value];
+    const old = !m && b && b.modell ? `Bisher „${b.modell}“. Bitte ein Modell wählen.` : "Ergibt sich aus dem Modell";
+    fields.nm.textContent = m ? `${m.nm} Nm` : "–";
+    fields.wh.textContent = m ? `${m.wh} Wh` : "–";
+    fields.schaltung.textContent = m ? m.schaltung : old;
+  };
+  fields.modell.addEventListener("change", showModell);
+  showModell();
   if (b && b.status === "verliehen") fields.status.disabled = true;
 
   // Bild: kommt automatisch aus der gewählten Farbe. Ein eigenes Foto pro Rad ist optional und hat Vorrang.
@@ -823,9 +842,8 @@ function openBikeForm(id) {
     field("Modell", fields.modell, true),
     field("Rahmengröße", fields.rahmen), field("Empfohlene Körpergröße", fields.koerper),
     field("Status", fields.status), field("Bauart", fields.art),
-    field("Drehmoment (Nm)", fields.nm), field("Akku (Wh)", fields.wh),
+    field("Drehmoment", fields.nm), field("Akku", fields.wh),
     field("Schaltung", fields.schaltung, true),
-    el("datalist", { id: "schaltungen" }, ...schList.map((s) => el("option", { value: s }))),
     field("Notiz", fields.notiz, true),
     err,
     el("div", { class: "actions full" },
@@ -838,16 +856,17 @@ function openBikeForm(id) {
     const nr = fields.nr.value.trim().toUpperCase();
     const num = (x) => { const n = parseInt(x.value, 10); return isNaN(n) ? null : n; };
     const data = {
-      modell: fields.modell.value.trim(), art: fields.art.value, rahmen: fields.rahmen.value,
+      modell: fields.modell.value, art: fields.art.value, rahmen: fields.rahmen.value,
       // Mitgespeichert, damit die Werte auch in der Datenbank lesbar sind. Maßgeblich bleibt die Rahmengröße.
       kMin: (RAHMEN_GROESSEN[fields.rahmen.value] || [null])[0], kMax: (RAHMEN_GROESSEN[fields.rahmen.value] || [null, null])[1],
-      nm: num(fields.nm), wh: num(fields.wh),
-      schaltung: fields.schaltung.value.trim(), notiz: fields.notiz.value.trim(), foto: fotoId,
+      // Mitgespeichert, damit die Werte auch in der Datenbank lesbar sind. Maßgeblich bleibt das Modell.
+      nm: (MODELLE[fields.modell.value] || {}).nm ?? null, wh: (MODELLE[fields.modell.value] || {}).wh ?? null,
+      schaltung: (MODELLE[fields.modell.value] || {}).schaltung ?? null, notiz: fields.notiz.value.trim(), foto: fotoId,
       farbe: fields.farbe.value || null,
       status: b && b.status === "verliehen" ? "verliehen" : fields.status.value,
       kunde: b ? b.kunde ?? null : null, seit: b ? b.seit ?? null : null,
     };
-    const problem = !data.modell ? "Bitte ein Modell eintragen."
+    const problem = !data.modell ? "Bitte ein Modell wählen."
       : !/^[A-Z0-9][A-Z0-9-]{0,11}$/.test(nr) ? "Die Inventarnummer darf nur Buchstaben, Ziffern und Minus enthalten."
       : !b && state.bikes.some((x) => x.id === nr) ? `Die Nummer ${nr} ist schon vergeben.`
       : !data.rahmen ? "Bitte eine Rahmengröße wählen."
