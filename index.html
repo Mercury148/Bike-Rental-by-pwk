@@ -73,11 +73,12 @@ h2 { margin: 0 0 0.4rem; font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 300
   .step-prompt .arrow { animation: nudge 1.6s ease-in-out infinite; }
   .step-prompt.fresh { animation: appear 0.5s ease-out; }
 }
-/* Nach der Modellwahl: alles über dem Trennstrich zu den Größen verblasst, der Blick geht auf die Größenkacheln.
-   Bleibt anklickbar, so lässt sich das Modell noch wechseln. */
-.topbar, .hero, #modelle { transition: opacity 0.45s ease; }
-body.focus-sizes .topbar, body.focus-sizes .hero, body.focus-sizes #modelle { opacity: 0.25; }
-@media (prefers-reduced-motion: reduce) { .topbar, .hero, #modelle { transition: none; } }
+/* Zwei schmale Balken links und rechts markieren den aktuellen Schritt:
+   erst die Räder, nach der Wahl die Größen, dann das Formular. Sie gleiten mit. */
+.step-bar { position: absolute; top: 0; left: 0; width: 3px; height: 0; background: var(--ink); pointer-events: none; z-index: 2;
+  transition: top 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), height 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), opacity 0.3s ease; opacity: 0; }
+.step-bar.on { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .step-bar { transition: none; } }
 @keyframes nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
 @keyframes appear { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 
@@ -306,6 +307,32 @@ function renderSizes() {
     }, el("span", { class: "k", text: k }), el("span", { class: "r", text: `${a}–${z} cm` }))));
 }
 
+/* ----- Schritt-Balken ----- */
+const STEP_TARGET = { models: "#models", sizes: "#size-grid", form: ".tally-wrap" };
+let step = "models";
+const bars = [el("div", { class: "step-bar", "aria-hidden": "true" }), el("div", { class: "step-bar", "aria-hidden": "true" })];
+function placeBars() {
+  const t = $(STEP_TARGET[step]).getBoundingClientRect();
+  const w = $("main").getBoundingClientRect();
+  const vw = document.documentElement.clientWidth;
+  const top = t.top + window.scrollY, h = t.height;
+  // Mittig im Seitenrand neben dem Inhalt, aber nie außerhalb des Bildschirms.
+  const gapL = w.left, gapR = vw - w.right;
+  const xL = Math.max(4, Math.round(gapL / 2 - 1.5));
+  const xR = Math.min(vw - 7, Math.round(w.right + gapR / 2 - 1.5));
+  [[bars[0], xL], [bars[1], xR]].forEach(([b, x]) => { b.style.top = top + "px"; b.style.height = h + "px"; b.style.left = x + "px"; b.classList.add("on"); });
+}
+function setStep(s) { step = s; placeBars(); }
+function initBars() {
+  bars.forEach((b) => document.body.append(b));
+  const ro = new ResizeObserver(() => placeBars());
+  Object.values(STEP_TARGET).forEach((sel) => ro.observe($(sel)));
+  ro.observe(document.body);
+  window.addEventListener("resize", placeBars);
+  if (document.fonts) document.fonts.ready.then(placeBars);
+  placeBars();
+}
+
 /* ----- Ablauf: Modell → Größe → Formular ----- */
 // Bezugspunkt ist jeweils der dünne graue Trennstrich (obere Kante einer Section).
 const lineY = (section) => section.getBoundingClientRect().top + window.scrollY;
@@ -326,14 +353,14 @@ function pickModel(name) {
   // Hinweis auf die Größenkacheln einblenden (vor dem Scrollen, damit die Position stimmt).
   const ps = $("#prompt-size");
   if (ps.hidden) { ps.hidden = false; ps.classList.add("fresh"); }
-  document.body.classList.add("focus-sizes");
+  setStep("sizes");
   document.querySelectorAll(".model").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.modell === name)));
   scrollSizesIntoView();
   setTimeout(() => $("#size-grid .size-card").focus({ preventScroll: true }), 350);
 }
 function pickSize(k) {
   choose({ rahmen: k });
-  document.body.classList.remove("focus-sizes");   // Größe gewählt: alles wieder normal
+  setStep("form");
   renderSizes();
   scrollFormIntoView();
 }
@@ -396,6 +423,7 @@ function boot() {
   }, 0); });
   $("#prefill-apply").addEventListener("click", () => { reloadForm(); $("#prefill").hidden = true; });
   loadTally();
+  initBars();
 }
 
 // Tally-Einbettung laden (offizielles Snippet): passt die Höhe automatisch an.
