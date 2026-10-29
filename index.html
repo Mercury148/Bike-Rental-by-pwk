@@ -48,7 +48,10 @@ button { cursor: pointer; }
 :focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-.wrap { max-width: 76rem; margin-inline: auto; }
+/* Volle Bildschirmbreite, damit so viele Radkacheln wie möglich nebeneinander passen.
+   Textlastige Ansichten bleiben auf eine lesbare Breite begrenzt (linksbündig, damit die Kanten fluchten). */
+.wrap { max-width: none; }
+#view-kunden, #view-werkstatt { max-width: 76rem; }
 
 /* ---------- Kopf ---------- */
 .topbar {
@@ -65,6 +68,13 @@ button { cursor: pointer; }
 .section-head p { margin: 0.35rem 0 0; color: var(--ink-soft); font-size: 0.9rem; }
 
 .note { margin: 1rem 0 0; padding: 0.7rem 0.9rem; background: var(--stone); font-size: 0.85rem; color: var(--ink-soft); }
+/* Auswahlmodus „Rad für Kunde wählen“ */
+.lend-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; margin-top: 1rem; padding: 0.75rem 1rem; background: var(--ink); color: var(--paper); }
+.lend-bar strong { font-family: var(--font-mono); font-weight: 500; letter-spacing: 0.04em; }
+.lend-bar .link { color: var(--paper); }
+.lend-sum { display: grid; grid-template-columns: minmax(0, 10rem) minmax(0, 1fr); gap: 1rem; align-items: center; }
+.lend-sum .pic { aspect-ratio: 4 / 3; }
+@media (max-width: 30rem) { .lend-sum { grid-template-columns: 1fr; } }
 
 /* ---------- Buttons & Felder ---------- */
 .btn {
@@ -89,7 +99,8 @@ textarea { resize: vertical; min-height: 5rem; }
 
 /* ---------- Filter ---------- */
 .filters { display: grid; gap: 1rem; grid-template-columns: 1fr; padding-bottom: 1.5rem; border-bottom: 1px solid var(--rule); }
-@media (min-width: 46rem) { .filters { grid-template-columns: 2fr 1fr 1fr 1fr; align-items: end; } .filters .row { grid-column: 1 / -1; } }
+@media (min-width: 46rem) { .filters { grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)); align-items: end; } .filters .row { grid-column: 1 / -1; } }
+@media (min-width: 82rem) { .filters { grid-template-columns: minmax(0, 30rem) repeat(3, minmax(0, 16rem)); } }
 .row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 .row .lbl { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); margin-right: 0.35rem; }
 .chip {
@@ -101,7 +112,9 @@ textarea { resize: vertical; min-height: 5rem; }
 .meta { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding-block: 1rem; font-size: 0.85rem; color: var(--ink-soft); }
 
 /* ---------- Radkarten ---------- */
-.grid { display: grid; gap: 2.5rem 1.5rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 17.5rem), 1fr)); }
+/* Feste Kachelbreite: die Anzahl der Spalten richtet sich nach der Bildschirmbreite, die Kacheln selbst bleiben gleich breit. */
+.grid { display: grid; gap: 2.5rem 1.5rem; grid-template-columns: repeat(auto-fit, min(100%, 18rem)); justify-content: center; }
+@media (max-width: 38rem) { .grid { grid-template-columns: minmax(0, 1fr); } }   /* Handy: eine Kachel über die volle Breite */
 .bike { display: grid; gap: 0.9rem; background: none; border: 0; padding: 0; text-align: left; color: var(--ink); cursor: pointer; min-width: 0; }
 /* Alle Kacheln einer Reihe teilen sich dieselben Zeilen: Bild, Hinweis, Name und die drei Datenzeilen.
    So liegen die Trennstriche überall auf gleicher Höhe und jedes Feld ist so hoch wie das höchste der Reihe. */
@@ -166,6 +179,41 @@ textarea { resize: vertical; min-height: 5rem; }
 }
 .tabs button[aria-selected="true"] { color: var(--ink); border-bottom: 2px solid var(--ink); }
 .badge { margin-left: 0.35rem; font: 500 0.75rem var(--font-mono); letter-spacing: 0; }
+@media (max-width: 30rem) { .tabs button { letter-spacing: 0.06em; font-size: 0.72rem; } }
+
+/* ---------- Werkstatt ---------- */
+.ws-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+.ws-row { display: grid; grid-template-columns: 2.5rem minmax(0, 11rem) minmax(0, 1fr); gap: 1.25rem; padding-block: 1.5rem; border-bottom: 1px solid var(--rule); align-items: start; }
+.ws-pos { font-size: 2rem; font-weight: 300; line-height: 1; font-variant-numeric: tabular-nums; }
+.ws-pic { min-width: 0; }
+.ws-main { display: grid; gap: 0.3rem; min-width: 0; }
+.ws-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.4rem 1rem; }
+.ws-id { font: 500 1rem var(--font-mono); letter-spacing: 0.04em; }
+.ws-since { font-size: 0.85rem; color: var(--ink-soft); }
+.ws-since.long { color: var(--shop); font-weight: 500; }
+.ws-main label.f { margin-top: 0.6rem; }
+.ws-main textarea { min-height: 4rem; }
+.ws-main .actions { margin-top: 0.4rem; }
+.ws-main .actions .btn { flex: 0 1 auto; }
+.ws-main label.f, .ws-main .actions { max-width: 40rem; }
+.seg { display: flex; flex-wrap: wrap; gap: 0.5rem; padding-bottom: 1.5rem; }
+.hist-tools { max-width: 28rem; padding-bottom: 1.25rem; }
+.hist-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+.hist-row {
+  display: grid; gap: 0.35rem 1.5rem; align-items: baseline; padding-block: 1rem; border-bottom: 1px solid var(--rule);
+  grid-template-columns: 7rem minmax(0, 15rem) minmax(0, 1fr) 6rem; grid-template-areas: "date bike job dur";
+}
+.hist-date { grid-area: date; font-variant-numeric: tabular-nums; }
+.hist-bike { grid-area: bike; display: grid; gap: 0.1rem; min-width: 0; }
+.hist-job { grid-area: job; min-width: 0; overflow-wrap: anywhere; }
+.hist-dur { grid-area: dur; text-align: right; font-size: 0.85rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+@media (max-width: 40rem) {
+  .hist-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "date dur" "bike bike" "job job"; }
+}
+@media (max-width: 40rem) {
+  .ws-row { grid-template-columns: 2rem minmax(0, 1fr); }
+  .ws-pic, .ws-main { grid-column: 2; }
+}
 
 /* ---------- Dialoge ---------- */
 dialog {
@@ -196,6 +244,11 @@ dialog::backdrop { background: rgba(20, 20, 18, 0.45); }
 .head-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }
 /* Fotos haben weißen Hintergrund: Fläche weiß statt grau, damit kein Rand ober- und unterhalb entsteht. */
 .pic:has(img) { background: var(--paper); }
+/* Trennlinie vor den verliehenen Rädern: eigene Zeile, darunter ein eigenes Raster. */
+.grid-divider { margin-top: 3rem; margin-bottom: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--ink-soft); }
+/* Gleiches Spaltenraster wie oben (auto-fill), damit verliehene Räder unter den Spalten der vollen Reihen stehen. */
+#grid-rented { grid-template-columns: repeat(auto-fill, min(100%, 18rem)); }
+@media (max-width: 38rem) { #grid-rented { grid-template-columns: minmax(0, 1fr); } }
 .ghost-tile { color: var(--ink-soft); }
 .ghost-tile .pic { background: var(--paper); border: 1px dashed var(--ink-soft); }
 .ghost-inner { display: grid; justify-items: center; gap: 0.35rem; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }
@@ -267,12 +320,18 @@ input[type="color"] { width: 100%; min-height: 44px; padding: 2px; background: v
         <div id="status-chips" class="row"></div>
       </div>
     </div>
+    <div id="lend-bar" class="lend-bar" hidden>
+      <span>Rad für Kunde <strong id="lend-cust"></strong> wählen. Ein Klick auf ein Rad verleiht es direkt.</span>
+      <button id="lend-cancel" class="link" type="button">Abbrechen</button>
+    </div>
     <div class="meta">
       <span id="count" aria-live="polite"></span>
       <button id="reset" class="link" type="button" hidden>Filter zurücksetzen</button>
     </div>
 
     <div id="grid" class="grid"></div>
+    <div id="rented-head" class="grid-divider" role="separator" hidden><span id="rented-label" class="eyebrow"></span></div>
+    <div id="grid-rented" class="grid"></div>
   </section>
 
   <!-- ===== Ansicht 2: Kundenkartei ===== -->
@@ -298,11 +357,35 @@ input[type="color"] { width: 100%; min-height: 44px; padding: 2px; background: v
     </div>
     <ul id="cust-list" class="cust-list"></ul>
   </section>
+
+  <!-- ===== Ansicht 3: Werkstatt ===== -->
+  <section id="view-werkstatt" aria-label="Werkstatt" hidden>
+    <div class="section-head">
+      <div>
+        <h2>Werkstatt</h2>
+        <p>Räder in Reparatur, in der Reihenfolge, in der sie gekommen sind. Oben steht, was zuerst dran ist.</p>
+      </div>
+    </div>
+    <div class="seg" role="group" aria-label="Werkstatt-Ansicht">
+      <button id="seg-offen" class="chip" type="button" aria-pressed="true">Offen <span id="seg-offen-n" class="badge"></span></button>
+      <button id="seg-hist" class="chip" type="button" aria-pressed="false">Reparaturhistorie <span id="seg-hist-n" class="badge"></span></button>
+    </div>
+    <ol id="ws-list" class="ws-list"></ol>
+    <div id="hist-view" hidden>
+      <div class="hist-tools">
+        <label class="f" for="hq">Historie durchsuchen
+          <input id="hq" type="search" placeholder="Inventarnr., Modell oder Auftrag" autocomplete="off">
+        </label>
+      </div>
+      <ul id="hist-list" class="hist-list"></ul>
+    </div>
+  </section>
 </main>
 
 <nav class="tabs" role="tablist" aria-label="Bereiche">
   <button role="tab" data-tab="inventar" aria-selected="true" type="button">Inventar <span id="badge-inv" class="badge"></span></button>
   <button role="tab" data-tab="kunden" aria-selected="false" type="button">Kundenkartei <span id="badge-cust" class="badge"></span></button>
+  <button role="tab" data-tab="werkstatt" aria-selected="false" type="button">Werkstatt <span id="badge-ws" class="badge"></span></button>
 </nav>
 
 <dialog id="dlg" aria-label="Details"><div id="dlg-body"></div></dialog>
@@ -331,9 +414,9 @@ const STATI = [
 ];
 // Modelle im Verleih. Drehmoment, Akku und Schaltung folgen fest aus dem Modell und sind nicht einzeln wählbar.
 const MODELLE = {
-  "Nevo5 silent CORE":    { nm: 75, wh: 540, schaltung: "Shimano Nexus, 5-Gang-Nabenschaltung, Riemenantrieb" },
-  "Nevo5 rücktritt CORE": { nm: 75, wh: 540, schaltung: "Shimano Nexus, 5-Gang-Nabenschaltung, Riemenantrieb, Rücktritt" },
-  "Nevo5 vario CORE":     { nm: 90, wh: 720, schaltung: "Enviolo, stufenlose Nabenschaltung, Riemenantrieb" },
+  "Nevo5 silent CORE":    { nm: 75, wh: 540, schaltung: "Nexus-5" },    // Shimano Nexus, 5-Gang-Nabenschaltung, Riemenantrieb
+  "Nevo5 rücktritt CORE": { nm: 75, wh: 540, schaltung: "Nexus-5R" },   // wie Nexus-5, zusätzlich Rücktritt
+  "Nevo5 vario CORE":     { nm: 90, wh: 720, schaltung: "Enviolo" },    // stufenlose Nabenschaltung, Riemenantrieb
 };
 // Ältere Schreibweisen, die noch in gespeicherten Einträgen stehen können.
 const MODELL_ALIASE = { "nevo5 silent core rücktritt": "Nevo5 rücktritt CORE" };
@@ -349,7 +432,7 @@ const nmOf = (b) => specOf(b).nm;
 const whOf = (b) => specOf(b).wh;
 const schaltungOf = (b) => specOf(b).schaltung;
 const LOCAL_KEY = "fahrradverleih-lokal-v1";
-const LOCAL_LISTS = { raeder: "bikes", kunden: "customers", farben: "colors" };
+const LOCAL_LISTS = { raeder: "bikes", kunden: "customers", farben: "colors", reparaturen: "repairs" };
 
 // Vorschläge beim Anlegen einer Farbe: die vier Rahmenfarben des Nevo5 silent CORE. Eigene Namen gehen genauso.
 const FARB_VORSCHLAEGE = [
@@ -399,6 +482,7 @@ const state = {
   bikes: [],
   customers: [],
   colors: [],          // Farbkatalog: { id, name, hex, foto }
+  repairs: [],         // Reparaturhistorie: { id, rad, modell, farbe, rahmen, auftrag, seit, fertig }
   canWrite: true,
   assets: null,
 };
@@ -518,12 +602,12 @@ function specList(b) {
 /* ---------- 4. Speicher ---------- */
 
 function saveLocal() {
-  try { localStorage.setItem(LOCAL_KEY, JSON.stringify({ bikes: state.bikes, customers: state.customers, colors: state.colors })); } catch {}
+  try { localStorage.setItem(LOCAL_KEY, JSON.stringify({ bikes: state.bikes, customers: state.customers, colors: state.colors, repairs: state.repairs })); } catch {}
 }
 function loadLocal() {
   try {
     const raw = localStorage.getItem(LOCAL_KEY);
-    if (raw) { const d = JSON.parse(raw); state.bikes = d.bikes || []; state.customers = d.customers || []; state.colors = d.colors || []; return; }
+    if (raw) { const d = JSON.parse(raw); state.bikes = d.bikes || []; state.customers = d.customers || []; state.colors = d.colors || []; state.repairs = d.repairs || []; return; }
   } catch {}
   state.bikes = PREVIEW_BIKES.map((b) => ({ ...b }));
 }
@@ -580,6 +664,53 @@ function nextBikeId() {
 
 const bikesOf = (custId) => state.bikes.filter((b) => b.status === "verliehen" && b.kunde === custId);
 
+// Auswahlmodus: aus der Kundenkartei über „Passende Räder“ gekommen. Klick auf ein Rad verleiht es an diesen Kunden.
+let lendFor = null;
+function setLendFor(custId) {
+  lendFor = custId;
+  $("#lend-bar").hidden = !custId;
+  $("#lend-cust").textContent = custId || "";
+  renderBikes();
+}
+
+function openLendConfirm(bikeId) {
+  const b = state.bikes.find((x) => x.id === bikeId);
+  const c = state.customers.find((x) => x.id === lendFor);
+  if (!b || !c) { setLendFor(null); return; }
+  if (b.status !== "verfügbar") {
+    return openDialog(dlgHead(`${b.id} · ${modelName(b)}`, "Nicht verfügbar"),
+      el("p", { text: b.status === "verliehen" ? `Dieses Rad ist gerade an ${b.kunde || "einen Kunden"} verliehen.` : "Dieses Rad ist in der Werkstatt." }),
+      el("div", { class: "actions" }, el("button", { class: "btn ghost", type: "button", text: "Anderes Rad wählen", onclick: closeDialog })));
+  }
+  const f = fits(b, c.groesse);
+  openDialog(
+    dlgHead("Verleihen", `${b.id} an ${c.id}`),
+    el("div", { class: "lend-sum" },
+      picture(b, false),
+      el("div", { class: "bike-head" },
+        el("span", { class: "eyebrow" }, colorLabel(b) || ""),
+        el("span", { class: "bike-name", text: modelName(b) }),
+        el("span", { class: "hint", text: `Rahmen ${b.rahmen || "–"} · ${rangeText(bodyRange(b))} · ${schaltungOf(b) || "–"}` })
+      )
+    ),
+    el("p", {
+      class: f === false ? "nomatch" : f ? "match" : "hint",
+      text: f === false ? `Achtung: ${c.groesse} cm liegt außerhalb von ${rangeText(bodyRange(b))}.`
+        : f ? `Passt: ${c.groesse} cm liegt im Bereich ${rangeText(bodyRange(b))}.` : "Für diesen Kunden ist keine Körpergröße hinterlegt.",
+    }),
+    el("div", { class: "actions" },
+      el("button", { class: "btn", type: "button", text: "Jetzt verleihen", onclick: async () => {
+        try { await lendBike(b.id, c.id); } catch { return; }
+        closeDialog();
+        resetFilters();        // zurück zur Startansicht: alle Filter weg, Auswahlmodus beendet
+        setLendFor(null);
+        window.scrollTo(0, 0);
+      } }),
+      el("button", { class: "btn ghost", type: "button", text: "Anderes Rad wählen", onclick: closeDialog })
+    )
+  );
+}
+
 async function lendBike(bikeId, custId) {
   await writeDoc("raeder", bikeId, { status: "verliehen", kunde: custId, seit: new Date().toISOString() }, true);
   toast(`${bikeId} an ${custId} verliehen.`);
@@ -587,6 +718,14 @@ async function lendBike(bikeId, custId) {
 async function returnBike(bikeId) {
   await writeDoc("raeder", bikeId, { status: "verfügbar", kunde: null, seit: null }, true);
   toast(`${bikeId} ist zurück und wieder verfügbar.`);
+}
+
+// Standardsortierung: Rahmengröße S, M, L, XL. Innerhalb einer Größe nach Inventarnummer.
+// Ältere Einträge ohne S–XL folgen nach ihrer Körpergröße dahinter.
+const SIZE_ORDER = Object.keys(RAHMEN_GROESSEN);
+function bySize(a, b) {
+  const rank = (x) => { const i = SIZE_ORDER.indexOf(x.rahmen); return i >= 0 ? i : SIZE_ORDER.length + ((bodyRange(x) || [999])[0] / 1000); };
+  return rank(a) - rank(b) || String(a.id).localeCompare(String(b.id), "de", { numeric: true });
 }
 
 function visibleBikes() {
@@ -599,7 +738,7 @@ function visibleBikes() {
     if (h && fits(b, h) === false) return false;
     if (q && ![b.id, modelName(b), b.art, schaltungOf(b), b.rahmen, (colorOf(b) || {}).name].join(" ").toLowerCase().includes(q)) return false;
     return true;
-  }).sort((a, b) => String(a.id).localeCompare(String(b.id), "de", { numeric: true }));
+  }).sort(bySize);
 }
 
 /* ---------- 6. Anzeige ---------- */
@@ -608,6 +747,7 @@ function renderAll() {
   renderFilterOptions();
   renderBikes();
   renderCustomers();
+  renderWerkstatt();
   const free = state.bikes.filter((b) => b.status === "verfügbar").length;
   $("#badge-inv").textContent = state.bikes.length ? `${free}/${state.bikes.length}` : "";
   $("#badge-cust").textContent = state.customers.length || "";
@@ -639,12 +779,13 @@ function renderFilterOptions() {
 
 function renderBikes() {
   const list = visibleBikes();
+  $("#rented-head").hidden = true; $("#grid-rented").replaceChildren();
   const active = filters.q || filters.farbe || filters.hoehe || filters.schaltung || filters.status.size;
   $("#reset").hidden = !active;
   $("#count").textContent = state.bikes.length ? `${list.length} von ${state.bikes.length} Rädern` : "";
 
   if (state.mode === "loading") return $("#grid").replaceChildren(el("p", { class: "empty", text: "Inventar wird geladen …" }));
-  // Leere Kachel am Ende: genau dort erscheint das nächste Rad (sortiert nach Inventarnummer).
+  // Leere Kachel am Ende der Liste zum Anlegen des nächsten Rads.
   // Nur ohne aktive Filter, sonst stünde sie an einer Stelle, an der das neue Rad gar nicht auftaucht.
   const ghost = state.canWrite && !active ? ghostTile() : null;
   if (!state.bikes.length) {
@@ -652,14 +793,22 @@ function renderBikes() {
   }
   if (!list.length) return $("#grid").replaceChildren(el("p", { class: "empty", text: "Kein Rad passt zu diesen Filtern. Setze einen Filter zurück, um mehr zu sehen." }));
 
-  $("#grid").replaceChildren(...list.map((b) =>
-    tile("bike", `${modelName(b)}, ${b.id}: Details öffnen`, () => openBike(b.id),
+  const card = (b) =>
+    tile("bike", lendFor ? `${modelName(b)}, ${b.id}: an ${lendFor} verleihen` : `${modelName(b)}, ${b.id}: Details öffnen`, () => (lendFor ? openLendConfirm(b.id) : openBike(b.id)),
       picture(b),
       photoNote(b) || emptyNote(),
       el("div", { class: "bike-head" }, el("span", { class: "eyebrow" }, colorLabel(b) || b.art || ""), el("span", { class: "bike-name", text: modelName(b) })),
       specList(b)
-    )
-  ), ghost || "");
+    );
+  // Verliehene Räder stehen ganz unten, abgetrennt in einer eigenen Zeile.
+  const here = list.filter((b) => b.status !== "verliehen");
+  const out = list.filter((b) => b.status === "verliehen");
+  $("#grid").replaceChildren(...here.map(card), ghost || "");
+  if (out.length) {
+    $("#rented-label").textContent = `Verliehen · ${out.length}`;
+    $("#rented-head").hidden = false;
+    $("#grid-rented").replaceChildren(...out.map(card));
+  }
 }
 
 // Kachel als <div role="button">: so lassen sich die Zeilen aller Kacheln per Subgrid auf eine Höhe bringen.
@@ -754,12 +903,15 @@ function openBike(id) {
       ) : null
     );
   } else if (b.status === "verfügbar" && state.canWrite) {
+    // Kunden nach Passform gruppiert: erst passende, dann (abgetrennt) unpassende, zuletzt ohne Körpergröße.
+    const sorted = [...state.customers].sort((a, c) => a.id.localeCompare(c.id));
+    const opt = (c) => el("option", { value: c.id, text: c.id + (c.groesse ? ` · ${c.groesse} cm` : "") });
+    const group = (label, list) => list.length ? el("optgroup", { label }, ...list.map(opt)) : null;
     const sel = el("select", { id: "lend-to" },
       el("option", { value: "", text: state.customers.length ? "Kundennummer wählen" : "Noch keine Kunden angelegt" }),
-      ...[...state.customers].sort((a, c) => a.id.localeCompare(c.id)).map((c) => {
-        const f = fits(b, c.groesse);
-        return el("option", { value: c.id, text: c.id + (c.groesse ? ` · ${c.groesse} cm${f === false ? " (passt nicht)" : f ? " (passt)" : ""}` : "") });
-      })
+      group(`Passt (${rangeText(bodyRange(b))})`, sorted.filter((c) => fits(b, c.groesse) === true)),
+      group("Passt nicht", sorted.filter((c) => fits(b, c.groesse) === false)),
+      group("Ohne Körpergröße", sorted.filter((c) => fits(b, c.groesse) == null))
     );
     const lend = el("button", { class: "btn", type: "button", text: "Verleihen", disabled: true,
       onclick: async () => { if (sel.value) { await lendBike(b.id, sel.value); closeDialog(); } } });
@@ -773,12 +925,13 @@ function openBike(id) {
     });
     rental = el("div", { class: "rental-box" },
       el("label", { class: "f", for: "lend-to" }, "Verleihen an", sel), info, el("div", { class: "actions" }, lend,
-        el("button", { class: "btn ghost", type: "button", text: "In die Werkstatt", onclick: () => setStatus(b.id, "werkstatt") })));
+        el("button", { class: "btn ghost", type: "button", text: "In die Werkstatt", onclick: () => openWorkshopIntake(b.id) })));
   } else if (b.status === "werkstatt") {
     rental = el("div", { class: "rental-box" },
       el("p", { text: "Dieses Rad ist in der Werkstatt und kann gerade nicht verliehen werden." }),
+      el("p", { class: "hint", text: sinceText(b) + (b.werkstattNotiz ? ` · Auftrag: ${b.werkstattNotiz}` : "") }),
       state.canWrite ? el("div", { class: "actions" },
-        el("button", { class: "btn", type: "button", text: "Wieder verfügbar", onclick: () => setStatus(b.id, "verfügbar") })) : null);
+        el("button", { class: "btn", type: "button", text: "Fertig, wieder verfügbar", onclick: () => finishRepair(b.id) })) : null);
   }
 
   openDialog(
@@ -800,10 +953,131 @@ function openBike(id) {
 }
 
 // Status wird im Detailfenster geändert, nicht im Formular. Verliehen/zurück läuft über Verleihen und Rücknahme.
-async function setStatus(id, status) {
-  try { await writeDoc("raeder", id, { status }, true); } catch { return; }
+// Beim Wechsel in die Werkstatt wird der Zeitpunkt gespeichert: danach sortiert die Werkstatt-Ansicht.
+async function setStatus(id, status, stayHere, auftrag) {
+  const data = status === "werkstatt"
+    ? { status, werkstattSeit: new Date().toISOString(), werkstattNotiz: auftrag || "" }
+    : { status, werkstattSeit: null, werkstattNotiz: null };
+  try { await writeDoc("raeder", id, data, true); } catch { return false; }
   toast(status === "werkstatt" ? `${id} ist in der Werkstatt.` : `${id} ist wieder verfügbar.`);
-  openBike(id);
+  if (!stayHere) openBike(id);
+  return true;
+}
+
+// „In die Werkstatt“ fragt zuerst, was zu tun ist.
+function openWorkshopIntake(id) {
+  const b = state.bikes.find((x) => x.id === id);
+  if (!b) return;
+  const note = el("textarea", { id: "wi-note", maxlength: 300, placeholder: "z. B. Bremse schleift, Rücklicht defekt, Riemenspannung prüfen" });
+  const err = el("p", { class: "nomatch full", hidden: true });
+  const form = el("form", { class: "form-grid", novalidate: true },
+    el("label", { class: "f full", for: "wi-note" }, "Was muss gemacht werden?", note),
+    err,
+    el("div", { class: "actions full" },
+      el("button", { class: "btn", type: "submit", text: "In die Werkstatt geben" }),
+      el("button", { class: "btn ghost", type: "button", text: "Abbrechen", onclick: () => openBike(id) })
+    )
+  );
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const text = note.value.trim();
+    if (!text) { err.textContent = "Bitte kurz eintragen, was gemacht werden muss."; err.hidden = false; return; }
+    await setStatus(id, "werkstatt", false, text);
+  });
+  openDialog(dlgHead(`${b.id} · ${modelName(b)}`, "In die Werkstatt"), form);
+  setTimeout(() => note.focus(), 50);
+}
+
+// „Fertig“: Eintrag in die Reparaturhistorie, dann ist das Rad wieder verfügbar.
+async function finishRepair(id, stayHere) {
+  const b = state.bikes.find((x) => x.id === id);
+  if (!b) return;
+  const entry = {
+    rad: b.id, modell: modelName(b), farbe: b.farbe || null, rahmen: b.rahmen || null,
+    auftrag: b.werkstattNotiz || "", seit: b.werkstattSeit || null, fertig: new Date().toISOString(),
+  };
+  try { await writeDoc("reparaturen", `${b.id}-${Date.now()}`, entry, false); } catch { return; }
+  try { await writeDoc("raeder", id, { status: "verfügbar", werkstattSeit: null, werkstattNotiz: null }, true); } catch { return; }
+  toast(`${id} ist fertig, wieder verfügbar und in der Historie.`);
+  if (!stayHere) openBike(id);
+}
+
+let wsView = "offen";
+function showWsView(v) {
+  wsView = v;
+  $("#seg-offen").setAttribute("aria-pressed", String(v === "offen"));
+  $("#seg-hist").setAttribute("aria-pressed", String(v === "historie"));
+  $("#ws-list").hidden = v !== "offen";
+  $("#hist-view").hidden = v !== "historie";
+}
+
+function renderHistory() {
+  const all = [...state.repairs].sort((a, b) => (b.fertig || "").localeCompare(a.fertig || ""));
+  $("#seg-hist-n").textContent = all.length || "";
+  const q = $("#hq").value.trim().toLowerCase();
+  const list = q ? all.filter((r) => [r.rad, r.modell, r.auftrag, (state.colors.find((c) => c.id === r.farbe) || {}).name].join(" ").toLowerCase().includes(q)) : all;
+  const box = $("#hist-list");
+  if (!all.length) return box.replaceChildren(el("li", { class: "empty", text: "Noch keine abgeschlossenen Reparaturen. Mit „Fertig, wieder verfügbar“ landet ein Rad hier." }));
+  if (!list.length) return box.replaceChildren(el("li", { class: "empty", text: "Keine Reparatur passt zu dieser Suche." }));
+  box.replaceChildren(...list.map((r) => {
+    const c = state.colors.find((x) => x.id === r.farbe);
+    const days = r.seit && r.fertig ? Math.max(0, Math.round((new Date(r.fertig) - new Date(r.seit)) / 86400000)) : null;
+    return el("li", { class: "hist-row" },
+      el("span", { class: "hist-date", text: fmtDate(r.fertig) }),
+      el("span", { class: "hist-bike" },
+        el("span", { class: "ws-id", text: r.rad }),
+        el("span", { class: "hint" }, c ? [swatch(c.hex), c.name, " · "] : "", r.modell || "", r.rahmen ? ` · ${r.rahmen}` : "")
+      ),
+      el("span", { class: "hist-job", text: r.auftrag || "Kein Auftrag eingetragen" }),
+      el("span", { class: "hist-dur", text: days == null ? "–" : days === 0 ? "am selben Tag" : days === 1 ? "1 Tag" : `${days} Tage` })
+    );
+  }));
+}
+
+const daysSince = (iso) => { const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000); return isNaN(d) ? null : Math.max(0, d); };
+const sinceText = (b) => {
+  if (!b.werkstattSeit) return "Seit wann, ist nicht erfasst";
+  const d = daysSince(b.werkstattSeit);
+  return `In der Werkstatt seit ${fmtDate(b.werkstattSeit)} · ${d === 0 ? "seit heute" : d === 1 ? "1 Tag" : d + " Tage"}`;
+};
+
+function renderWerkstatt() {
+  // Ältestes zuerst. Räder ohne erfassten Zeitpunkt stehen am Ende.
+  const list = state.bikes.filter((b) => b.status === "werkstatt").sort((a, b) =>
+    (a.werkstattSeit || "9999").localeCompare(b.werkstattSeit || "9999") || String(a.id).localeCompare(String(b.id), "de", { numeric: true }));
+  $("#badge-ws").textContent = list.length || "";
+  $("#seg-offen-n").textContent = list.length || "";
+  renderHistory();
+  const box = $("#ws-list");
+  const ae = document.activeElement;
+  if (ae && ae.tagName === "TEXTAREA" && box.contains(ae)) return;   // nicht neu zeichnen, während jemand eine Notiz schreibt
+  if (state.mode === "loading") return box.replaceChildren(el("li", { class: "empty", text: "Werkstatt wird geladen …" }));
+  if (!list.length) return box.replaceChildren(el("li", { class: "empty", text: "Gerade ist kein Rad in der Werkstatt. Über „In die Werkstatt“ im Detailfenster eines Rads kommt es hierher. Erledigte Reparaturen findest du unter „Reparaturhistorie“." }));
+
+  box.replaceChildren(...list.map((b, i) => {
+    const d = b.werkstattSeit ? daysSince(b.werkstattSeit) : null;
+    const note = el("textarea", { id: "ws-note-" + b.id, maxlength: 300, placeholder: "Was ist zu tun? z. B. Bremse schleift, Rücklicht defekt", disabled: !state.canWrite });
+    note.value = b.werkstattNotiz || "";
+    note.addEventListener("change", async () => {
+      try { await writeDoc("raeder", b.id, { werkstattNotiz: note.value.trim() }, true); } catch { return; }
+      toast(`Auftrag für ${b.id} gespeichert.`);
+    });
+    return el("li", { class: "ws-row" },
+      el("span", { class: "ws-pos", "aria-label": `Platz ${i + 1}`, text: String(i + 1) }),
+      el("div", { class: "ws-pic" }, picture(b, false)),
+      el("div", { class: "ws-main" },
+        el("div", { class: "ws-head" }, el("span", { class: "ws-id", text: b.id }), el("span", { class: "eyebrow" }, colorLabel(b) || "")),
+        el("span", { class: "bike-name", text: modelName(b) }),
+        el("span", { class: "hint", text: `Rahmen ${b.rahmen || "–"} · ${schaltungOf(b) || "–"}` }),
+        el("span", { class: d != null && d >= 7 ? "ws-since long" : "ws-since", text: sinceText(b) }),
+        el("label", { class: "f", for: note.id }, "Auftrag", note),
+        state.canWrite ? el("div", { class: "actions" },
+          el("button", { class: "btn", type: "button", text: "Fertig, wieder verfügbar", onclick: () => finishRepair(b.id, true) }),
+          el("button", { class: "btn ghost", type: "button", text: "Details", onclick: () => openBike(b.id) })
+        ) : null
+      )
+    );
+  }));
 }
 
 function openBikeForm(id) {
@@ -981,7 +1255,8 @@ function openCustomer(id) {
         el("button", { class: "btn ghost", type: "button", text: c.groesse ? `Passende Räder (${c.groesse} cm)` : "Freie Räder zeigen", onclick: () => {
           filters.hoehe = c.groesse ? String(c.groesse) : ""; $("#f-hoehe").value = filters.hoehe;
           filters.status = new Set(["verfügbar"]);
-          closeDialog(); showTab("inventar"); renderFilterOptions(); renderBikes();
+          closeDialog(); showTab("inventar"); renderFilterOptions();
+          setLendFor(state.canWrite ? c.id : null);   // Klick auf ein Rad verleiht es direkt an diesen Kunden
         } })
       )
     ),
@@ -1092,27 +1367,35 @@ function openColors() {
 }
 
 function showTab(name) {
+  if (name !== "inventar" && lendFor) setLendFor(null);   // Auswahlmodus endet beim Verlassen des Inventars
   for (const t of document.querySelectorAll("[role=tab]")) t.setAttribute("aria-selected", String(t.dataset.tab === name));
   $("#view-inventar").hidden = name !== "inventar";
   $("#view-kunden").hidden = name !== "kunden";
+  $("#view-werkstatt").hidden = name !== "werkstatt";
   try { localStorage.setItem("fahrradverleih-tab", name); } catch {}
   window.scrollTo(0, 0);
 }
 
 /* ---------- 7. Start ---------- */
 
+function resetFilters() {
+  Object.assign(filters, { q: "", farbe: "", hoehe: "", schaltung: "", status: new Set() });
+  $("#q").value = ""; $("#f-hoehe").value = "";
+  renderFilterOptions(); renderBikes();
+}
+
 function wire() {
+  $("#lend-cancel").addEventListener("click", () => setLendFor(null));
   $("#q").addEventListener("input", (e) => { filters.q = e.target.value; renderBikes(); });
   $("#f-farbe").addEventListener("change", (e) => { filters.farbe = e.target.value; renderBikes(); });
   $("#colors-btn").addEventListener("click", openColors);
   $("#f-schaltung").addEventListener("change", (e) => { filters.schaltung = e.target.value; renderBikes(); });
   $("#f-hoehe").addEventListener("input", (e) => { filters.hoehe = e.target.value; renderBikes(); });
-  $("#reset").addEventListener("click", () => {
-    Object.assign(filters, { q: "", farbe: "", hoehe: "", schaltung: "", status: new Set() });
-    $("#q").value = ""; $("#f-hoehe").value = "";
-    renderFilterOptions(); renderBikes();
-  });
+  $("#reset").addEventListener("click", resetFilters);
   $("#cq").addEventListener("input", renderCustomers);
+  $("#seg-offen").addEventListener("click", () => showWsView("offen"));
+  $("#seg-hist").addEventListener("click", () => showWsView("historie"));
+  $("#hq").addEventListener("input", renderHistory);
   $("#c-sort").addEventListener("change", renderCustomers);
   $("#new-cust").addEventListener("click", openNewCustomer);
   for (const t of document.querySelectorAll("[role=tab]")) t.addEventListener("click", () => showTab(t.dataset.tab));
@@ -1121,7 +1404,11 @@ function wire() {
 
 async function boot() {
   wire();
-  try { const t = localStorage.getItem("fahrradverleih-tab"); if (t === "kunden") showTab("kunden"); } catch {}
+  // Direktlink: Artefakt-Link mit #werkstatt (oder #kunden) öffnet gleich diese Ansicht.
+  const TABS = ["inventar", "kunden", "werkstatt"];
+  const fromHash = location.hash.slice(1);
+  if (TABS.includes(fromHash)) showTab(fromHash);
+  else try { const t = localStorage.getItem("fahrradverleih-tab"); if (TABS.includes(t) && t !== "inventar") showTab(t); } catch {}
   renderAll();
 
   db = window.claude ? await claude.use("db").catch(() => null) : null;
@@ -1143,7 +1430,7 @@ async function boot() {
   }).catch(() => {});
 
   let loaded = 0;
-  const done = () => { if (++loaded >= 3) renderAll(); };
+  const done = () => { if (++loaded >= 4) renderAll(); };
   const onErr = () => { $("#mode").textContent = "Verbindung unterbrochen · lade die Seite neu"; };
   let firstR = true, firstK = true;
   db.collection("raeder").onSnapshot((s) => {
@@ -1158,6 +1445,11 @@ async function boot() {
   db.collection("farben").onSnapshot((s) => {
     state.colors = s.docs.map((d) => ({ ...d.data(), id: d.id }));
     if (firstF) { firstF = false; done(); } else renderAll();
+  }, onErr);
+  let firstH = true;
+  db.collection("reparaturen").onSnapshot((s) => {
+    state.repairs = s.docs.map((d) => ({ ...d.data(), id: d.id }));
+    if (firstH) { firstH = false; done(); } else renderAll();
   }, onErr);
 }
 
