@@ -151,7 +151,7 @@ footer a { color: var(--ink-soft); }
     <p class="lead">Alle Räder sind Tiefeinsteiger mit Riemenantrieb. Sie unterscheiden sich in Motor, Akku und Schaltung.</p>
     <div class="models" id="models"></div>
     <div class="colors" id="colors" aria-label="Verfügbare Farben"></div>
-    <p class="small">Die Bilder sind Beispielbilder. Die genaue Ausstattung kann abweichen, maßgeblich sind Modell und Farbe. Welche Farbe gerade frei ist, bestätigen wir mit deiner Anfrage.</p>
+    <p class="small">Die Bilder sind Beispielbilder. Die genaue Ausstattung kann abweichen. Die Farbe deines Rads wird je nach Verfügbarkeit zufällig vergeben.</p>
   </section>
 
   <section id="groessen" aria-labelledby="h-groessen">
@@ -281,20 +281,30 @@ function renderSizes() {
 }
 
 /* ----- Ablauf: Modell → Größe → Formular ----- */
-function scrollToEl(node) {
+// Bezugspunkt ist jeweils der dünne graue Trennstrich (obere Kante einer Section).
+const lineY = (section) => section.getBoundingClientRect().top + window.scrollY;
+function scrollToY(y) {
   const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  node.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "start" });
+  window.scrollTo({ top: Math.max(0, Math.round(y)), behavior: smooth ? "smooth" : "auto" });
 }
+// Nach der Modellwahl: Trennstrich unter den Größenkacheln an den unteren Bildschirmrand.
+// Ist er schon sichtbar, bleibt die Seite stehen (sonst würde sie auf großen Bildschirmen nach oben springen).
+function scrollSizesIntoView() {
+  const target = lineY($("#anfrage")) + 1 - window.innerHeight;
+  if (target > window.scrollY) scrollToY(target);
+}
+// Nach der Größenwahl: Trennstrich über „Reservierung anfragen“ an den oberen Bildschirmrand.
+const scrollFormIntoView = () => scrollToY(lineY($("#anfrage")));
 function pickModel(name) {
   choose({ modell: name });
   document.querySelectorAll(".model").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.modell === name)));
-  scrollToEl($("#groessen"));
+  scrollSizesIntoView();
   setTimeout(() => $("#size-grid .size-card").focus({ preventScroll: true }), 350);
 }
 function pickSize(k) {
   choose({ rahmen: k });
   renderSizes();
-  scrollToEl($("#anfrage"));
+  scrollFormIntoView();
 }
 
 /* ----- Formular vorausfüllen -----
@@ -328,7 +338,10 @@ function choose(change, sizes = null) {
   if (wahl.rahmen) parts.push(`Rahmengröße ${wahl.rahmen}`);
   else if (sizes && sizes.length > 1) parts.push(`Rahmengröße ${sizes.join(" oder ")} (bitte im Formular wählen)`);
   $("#prefill").hidden = parts.length === 0;
-  if (tallyUrl() === before) { $("#prefill-text").textContent = parts.length ? `Vorausgewählt: ${parts.join(" · ")}.` : ""; return; }
+  if (tallyUrl() === before) {
+    if ($("#prefill-apply").hidden) $("#prefill-text").textContent = parts.length ? `Vorausgewählt: ${parts.join(" · ")}.` : "";
+    return;
+  }
   if (formTouched) {
     $("#prefill-text").textContent = `Deine Auswahl: ${parts.join(" · ")}.`;
     $("#prefill-apply").hidden = false;   // nicht ungefragt neu laden, sonst gehen Eingaben verloren
@@ -347,7 +360,13 @@ function boot() {
   $("#imprint-link").href = CONFIG.impressumUrl;
   renderModels(); renderSizes();
   // Wechselt der Fokus ins Formular, hat der Kunde angefangen auszufüllen.
-  window.addEventListener("blur", () => { setTimeout(() => { if (document.activeElement === $("#tally-form")) formTouched = true; }, 0); });
+  // Fokus wandert ins Formular = Kunde füllt aus. Ausnahme: kurz nach dem (Neu-)Laden holt sich
+  // das Formular den Fokus manchmal selbst, das zählt nicht als Eingabe.
+  let loadedAt = 0;
+  $("#tally-form").addEventListener("load", () => { loadedAt = Date.now(); });
+  window.addEventListener("blur", () => { setTimeout(() => {
+    if (document.activeElement === $("#tally-form") && Date.now() - loadedAt > 2500) formTouched = true;
+  }, 0); });
   $("#prefill-apply").addEventListener("click", () => { reloadForm(); $("#prefill-text").textContent = $("#prefill-text").textContent.replace("Deine Auswahl", "Vorausgewählt"); });
   loadTally();
 }
