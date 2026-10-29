@@ -87,7 +87,8 @@ h2 { margin: 0 0 0.4rem; font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 300
 .model { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .model:hover .pic img, .model:hover .pic svg { transform: scale(1.02); }
 .pic img, .pic svg { transition: transform 0.35s ease; }
-.model[aria-pressed="true"] .pic { outline: 2px solid var(--ink); outline-offset: -2px; }
+/* Rahmen als eigene Ebene über dem Bild, damit der Zoom beim Überfahren ihn nicht verdeckt. */
+.model[aria-pressed="true"] .pic::after { content: ""; position: absolute; inset: 0; border: 2px solid var(--ink); pointer-events: none; z-index: 1; }
 .model[aria-pressed="true"] .btn { background: var(--ink); color: var(--paper); }
 /* Größenkacheln: vier gleich große Felder, auf dem Handy zwei pro Reihe */
 .size-grid { display: grid; gap: 0.75rem; grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: 46rem; }
