@@ -64,6 +64,17 @@ button, input, select, textarea { font: inherit; color: inherit; }
 section { padding-block: 3rem; border-top: 1px solid var(--rule); }
 h2 { margin: 0 0 0.4rem; font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 300; letter-spacing: -0.02em; line-height: 1.1; text-wrap: balance; }
 .lead { margin: 0 0 2rem; color: var(--ink-soft); max-width: 40rem; }
+/* Schritt-Hinweis direkt über den Kacheln: Frage + kleiner Pfeil nach unten. */
+.step-prompt { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.35rem 0.75rem; margin: -0.75rem 0 1.25rem; }
+.step-prompt .q { font-size: 1.3rem; font-weight: 500; letter-spacing: -0.01em; }
+.step-prompt .hint { font-size: 0.9rem; color: var(--ink-soft); }
+.step-prompt .arrow { display: inline-block; font-size: 1.2rem; line-height: 1; }
+@media (prefers-reduced-motion: no-preference) {
+  .step-prompt .arrow { animation: nudge 1.6s ease-in-out infinite; }
+  .step-prompt.fresh { animation: appear 0.5s ease-out; }
+}
+@keyframes nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
+@keyframes appear { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 
 /* Modelle */
 .models { display: grid; gap: 2.5rem 1.5rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); }
@@ -149,14 +160,24 @@ footer a { color: var(--ink-soft); }
   <section id="modelle" aria-labelledby="h-modelle">
     <h2 id="h-modelle">Modelle</h2>
     <p class="lead">Alle Räder sind Tiefeinsteiger mit Riemenantrieb. Sie unterscheiden sich in Motor, Akku und Schaltung.</p>
+    <p class="step-prompt" id="prompt-model">
+      <span class="arrow" aria-hidden="true">↓</span>
+      <span class="q">Welches Modell möchtest du ausleihen?</span>
+      <span class="hint">Tippe auf eines der drei Räder.</span>
+    </p>
     <div class="models" id="models"></div>
     <div class="colors" id="colors" aria-label="Verfügbare Farben"></div>
     <p class="small">Die Bilder sind Beispielbilder. Die genaue Ausstattung kann abweichen. Die Farbe deines Rads wird je nach Verfügbarkeit zufällig vergeben.</p>
   </section>
 
   <section id="groessen" aria-labelledby="h-groessen">
-    <h2 id="h-groessen">Welche Größe passt?</h2>
-    <p class="lead">Die Rahmengröße richtet sich nach deiner Körpergröße. Tippe auf deine Größe, dann geht es weiter zur Anfrage.</p>
+    <h2 id="h-groessen">Rahmengröße</h2>
+    <p class="lead">Die Rahmengröße richtet sich nach deiner Körpergröße.</p>
+    <p class="step-prompt" id="prompt-size" hidden>
+      <span class="arrow" aria-hidden="true">↓</span>
+      <span class="q">Welche Größe passt dir?</span>
+      <span class="hint">Tippe auf deine Größe, dann geht es weiter zur Anfrage.</span>
+    </p>
     <div class="size-grid" id="size-grid" role="group" aria-label="Rahmengröße"></div>
   </section>
 
@@ -297,6 +318,9 @@ function scrollSizesIntoView() {
 const scrollFormIntoView = () => scrollToY(lineY($("#anfrage")));
 function pickModel(name) {
   choose({ modell: name });
+  // Hinweis auf die Größenkacheln einblenden (vor dem Scrollen, damit die Position stimmt).
+  const ps = $("#prompt-size");
+  if (ps.hidden) { ps.hidden = false; ps.classList.add("fresh"); }
   document.querySelectorAll(".model").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.modell === name)));
   scrollSizesIntoView();
   setTimeout(() => $("#size-grid .size-card").focus({ preventScroll: true }), 350);
