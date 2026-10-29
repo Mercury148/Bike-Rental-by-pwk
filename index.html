@@ -89,13 +89,19 @@ h2 { margin: 0 0 0.4rem; font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 300
 .pic img, .pic svg { transition: transform 0.35s ease; }
 .model[aria-pressed="true"] .pic { outline: 2px solid var(--ink); outline-offset: -2px; }
 .model[aria-pressed="true"] .btn { background: var(--ink); color: var(--paper); }
+/* Größenkacheln: vier gleich große Felder, auf dem Handy zwei pro Reihe */
+.size-grid { display: grid; gap: 0.75rem; grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: 46rem; }
+@media (max-width: 34rem) { .size-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.size-card {
+  display: grid; gap: 0.25rem; justify-items: start; align-content: center; padding: 1.25rem 1rem; min-height: 6.5rem;
+  background: var(--stone); color: var(--ink); border: 1px solid transparent; border-radius: 0; cursor: pointer; text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+.size-card:hover { border-color: var(--ink); }
+.size-card[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.size-card .k { font: 500 1.8rem/1 var(--font-mono); }
+.size-card .r { font-size: 0.95rem; font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) { .pic img, .pic svg { transition: none; } }
-.size-table tbody tr { cursor: pointer; }
-.size-table tbody tr:hover td { background: var(--stone); }
-.size-table tr.picked td { background: var(--ink); color: var(--paper); }
-.calc-row { display: flex; gap: 0.5rem; }
-.calc-row input { flex: 1; min-width: 0; }
-.calc-choices { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
 .colors { display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; margin-top: 2.5rem; }
 .color { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; }
@@ -103,15 +109,6 @@ h2 { margin: 0 0 0.4rem; font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 300
 .small { font-size: 0.8rem; color: var(--ink-soft); margin: 1rem 0 0; }
 
 /* Größen */
-.sizes { display: grid; gap: 2rem; grid-template-columns: minmax(0, 1fr); align-items: start; }
-@media (min-width: 52rem) { .sizes { grid-template-columns: minmax(0, 22rem) minmax(0, 1fr); } }
-.size-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-.size-table th, .size-table td { text-align: left; padding: 0.8rem 0.5rem 0.8rem 0; border-bottom: 1px solid var(--rule); }
-.size-table th { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft); }
-.size-table td:first-child { font: 500 1.1rem var(--font-mono); width: 4rem; }
-.size-table tr.hit td { background: var(--stone); }
-.calc { display: grid; gap: 0.75rem; padding: 1.5rem; background: var(--stone); }
-.calc output { font-size: 1.1rem; min-height: 1.6em; }
 
 /* Tally-Formular */
 .tally-wrap { max-width: 46rem; margin-bottom: 1rem; }
@@ -159,22 +156,8 @@ footer a { color: var(--ink-soft); }
 
   <section id="groessen" aria-labelledby="h-groessen">
     <h2 id="h-groessen">Welche Größe passt?</h2>
-    <p class="lead">Die Rahmengröße richtet sich nach deiner Körpergröße. Liegst du zwischen zwei Größen, beraten wir dich gern bei der Abholung.</p>
-    <div class="sizes">
-      <div class="calc">
-        <label class="f" for="calc-h">Deine Körpergröße (cm)</label>
-        <form id="calc-form" class="calc-row" novalidate>
-          <input id="calc-h" type="number" inputmode="numeric" enterkeyhint="next" min="140" max="220" placeholder="z. B. 178">
-          <button class="btn" type="submit">Weiter</button>
-        </form>
-        <output id="calc-out" for="calc-h" aria-live="polite"></output>
-        <div id="calc-choices" class="calc-choices" hidden></div>
-      </div>
-      <table class="size-table">
-        <thead><tr><th scope="col">Rahmen</th><th scope="col">Körpergröße</th></tr></thead>
-        <tbody id="size-rows"></tbody>
-      </table>
-    </div>
+    <p class="lead">Die Rahmengröße richtet sich nach deiner Körpergröße. Tippe auf deine Größe, dann geht es weiter zur Anfrage.</p>
+    <div class="size-grid" id="size-grid" role="group" aria-label="Rahmengröße"></div>
   </section>
 
   <section id="anfrage" aria-labelledby="h-anfrage">
@@ -216,7 +199,7 @@ const MODELLE = [
   { name: "Nevo5 rücktritt CORE", motor: "Bosch Performance Line",    nm: 75, wh: 540, schaltung: "Nexus-5R", info: "Shimano Nexus 5-Gang mit Rücktritt, Riemenantrieb" },
   { name: "Nevo5 vario CORE",     motor: "Bosch Performance Line PX", nm: 90, wh: 720, schaltung: "Enviolo",  info: "Enviolo stufenlos, Riemenantrieb" },
 ];
-const RAHMEN_GROESSEN = { S: [155, 170], M: [165, 180], L: [175, 190], XL: [185, 210] };
+const RAHMEN_GROESSEN = { S: [155, 165], M: [166, 175], L: [176, 185], XL: [186, 210] };
 // Bilder: lege Fotos als bilder/<datei>.jpg ins Repo. Fehlt eine Datei, erscheint eine Strichzeichnung.
 const FARBEN = [
   { name: "Ice Blue",   hex: "#b9d3df", bild: "bilder/ice-blue.jpg" },
@@ -264,7 +247,6 @@ function picture(farbName, alt) {
   } else box.append(drawing());
   return box;
 }
-const sizeFor = (h) => Object.entries(RAHMEN_GROESSEN).filter(([, [a, z]]) => h >= a && h <= z).map(([k]) => k);
 const fmt = (iso) => iso ? new Date(iso + "T12:00:00").toLocaleDateString("de-DE") : "";
 
 /* ----- Modelle, Farben, Größen ----- */
@@ -290,23 +272,12 @@ function renderModels() {
     ...FARBEN.map((f) => el("span", { class: "color" }, el("span", { class: "swatch", style: `--sw:${f.hex}`, "aria-hidden": "true" }), f.name)));
 }
 
-function renderSizes(highlight = []) {
-  $("#size-rows").replaceChildren(...Object.entries(RAHMEN_GROESSEN).map(([k, [a, z]]) =>
-    el("tr", {
-      class: wahl.rahmen === k ? "picked" : highlight.includes(k) ? "hit" : null,
-      tabindex: "0", "aria-label": `Rahmengröße ${k} wählen`,
-      onclick: () => pickSize(k),
-      onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pickSize(k); } },
-    }, el("td", { text: k }), el("td", { text: `${a}–${z} cm` }))));
-}
-function updateCalc() {
-  const h = parseInt($("#calc-h").value, 10);
-  const out = $("#calc-out");
-  if (!h) { out.textContent = ""; renderSizes(); return; }
-  const s = sizeFor(h);
-  out.textContent = s.length ? `Für ${h} cm passt Rahmengröße ${s.join(" oder ")}.` : "Für diese Körpergröße haben wir leider kein passendes Rad.";
-  renderSizes(s);
-  $("#calc-choices").hidden = true;
+function renderSizes() {
+  $("#size-grid").replaceChildren(...Object.entries(RAHMEN_GROESSEN).map(([k, [a, z]]) =>
+    el("button", {
+      class: "size-card", type: "button", "aria-pressed": String(wahl.rahmen === k),
+      "aria-label": `Rahmengröße ${k} für ${a} bis ${z} cm wählen`, onclick: () => pickSize(k),
+    }, el("span", { class: "k", text: k }), el("span", { class: "r", text: `${a}–${z} cm` }))));
 }
 
 /* ----- Ablauf: Modell → Größe → Formular ----- */
@@ -318,27 +289,12 @@ function pickModel(name) {
   choose({ modell: name });
   document.querySelectorAll(".model").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.modell === name)));
   scrollToEl($("#groessen"));
-  // Fokus ins Größenfeld, ohne dass der Browser dabei selbst springt (öffnet auf dem Handy die Zahlentastatur).
-  setTimeout(() => $("#calc-h").focus({ preventScroll: true }), 350);
+  setTimeout(() => $("#size-grid .size-card").focus({ preventScroll: true }), 350);
 }
 function pickSize(k) {
   choose({ rahmen: k });
   renderSizes();
-  $("#calc-choices").hidden = true;
-  $("#calc-out").textContent = `Rahmengröße ${k} ist gemerkt.`;
   scrollToEl($("#anfrage"));
-}
-// „Weiter“ bzw. Eingabetaste im Größenfeld: eindeutige Größe übernehmen, bei zwei Größen nachfragen.
-function submitHeight(e) {
-  e.preventDefault();
-  const h = parseInt($("#calc-h").value, 10);
-  const s = h ? sizeFor(h) : [];
-  if (!h) { $("#calc-out").textContent = "Bitte deine Körpergröße in cm eintragen."; return; }
-  if (!s.length) { $("#calc-out").textContent = "Für diese Körpergröße haben wir leider kein passendes Rad. Ruf uns gern an."; return; }
-  if (s.length === 1) { $("#calc-h").blur(); pickSize(s[0]); return; }
-  $("#calc-out").textContent = `Für ${h} cm passen ${s.join(" und ")}. Welche Größe möchtest du?`;
-  $("#calc-choices").replaceChildren(...s.map((k) => el("button", { class: "btn ghost", type: "button", text: `Rahmen ${k}`, onclick: () => { $("#calc-h").blur(); pickSize(k); } })));
-  $("#calc-choices").hidden = false;
 }
 
 /* ----- Formular vorausfüllen -----
@@ -390,8 +346,6 @@ function boot() {
   for (const id of ["#ds-link", "#ds-link-2"]) $(id).href = CONFIG.datenschutzUrl;
   $("#imprint-link").href = CONFIG.impressumUrl;
   renderModels(); renderSizes();
-  $("#calc-h").addEventListener("input", updateCalc);
-  $("#calc-form").addEventListener("submit", submitHeight);
   // Wechselt der Fokus ins Formular, hat der Kunde angefangen auszufüllen.
   window.addEventListener("blur", () => { setTimeout(() => { if (document.activeElement === $("#tally-form")) formTouched = true; }, 0); });
   $("#prefill-apply").addEventListener("click", () => { reloadForm(); $("#prefill-text").textContent = $("#prefill-text").textContent.replace("Deine Auswahl", "Vorausgewählt"); });
