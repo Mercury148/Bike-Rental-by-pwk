@@ -79,6 +79,19 @@ h2 { margin: 0 0 0.4rem; font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 300
   transition: top 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), height 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), opacity 0.3s ease; opacity: 0; }
 .step-bar.on { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .step-bar { transition: none; } }
+/* Nach-oben-Knopf: unten rechts, bündig mit der rechten Inhaltskante (so kommt er dem Seitenbalken nicht in die Quere). */
+.to-top {
+  position: fixed; z-index: 5;
+  right: max(calc(16px + env(safe-area-inset-right, 0px)), calc((100vw - 72rem) / 2));
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  width: 48px; height: 48px; display: grid; place-items: center;
+  background: var(--ink); color: var(--paper); border: 0; border-radius: 0; cursor: pointer;
+  font-size: 1.3rem; line-height: 1;
+  opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.to-top.show { opacity: 1; transform: none; pointer-events: auto; }
+.to-top:hover { background: #2a2a2a; }
+@media (prefers-reduced-motion: reduce) { .to-top { transition: none; transform: none; } }
 @keyframes nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
 @keyframes appear { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 
@@ -307,6 +320,21 @@ function renderSizes() {
     }, el("span", { class: "k", text: k }), el("span", { class: "r", text: `${a}–${z} cm` }))));
 }
 
+/* ----- Nach oben ----- */
+function initToTop() {
+  const btn = el("button", { class: "to-top", type: "button", "aria-label": "Nach oben", title: "Nach oben", text: "↑",
+    onclick: () => { scrollToY(0); setStep("models"); } });   // Balken gleiten mit zurück zu den Rädern
+  document.body.append(btn);
+  // Erscheint, sobald die Kopfzeile (oberer Seitenrand) aus dem Bild gescrollt ist.
+  const update = () => {
+    const show = $(".topbar").getBoundingClientRect().bottom < 0;
+    btn.classList.toggle("show", show);
+    btn.tabIndex = show ? 0 : -1;   // unsichtbar = nicht per Tab erreichbar
+  };
+  window.addEventListener("scroll", update, { passive: true });
+  update();
+}
+
 /* ----- Schritt-Balken ----- */
 const STEP_TARGET = { models: "#models", sizes: "#size-grid", form: ".tally-wrap" };
 let step = "models";
@@ -424,6 +452,7 @@ function boot() {
   $("#prefill-apply").addEventListener("click", () => { reloadForm(); $("#prefill").hidden = true; });
   loadTally();
   initBars();
+  initToTop();
 }
 
 // Tally-Einbettung laden (offizielles Snippet): passt die Höhe automatisch an.
