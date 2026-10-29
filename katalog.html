@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Nevo5 mieten · pedalwerk</title>
+<meta name="description" content="E-Bike-Verleih: Riese & Müller Nevo5 in drei Varianten und vier Rahmengrößen. Jetzt unverbindlich anfragen.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: ruhiger Produktkatalog auf Weiß, drei Modellkacheln, Größenrechner, Anfrageformular. Gleiche Gestaltung wie das interne Portal. */
+:root {
+  color-scheme: light;
+  --paper: #ffffff;
+  --stone: #f3f3f1;
+  --rule: #e2e2de;
+  --ink: #0b0b0b;
+  --ink-soft: #6b6b66;
+  --ok: #1f6b3a;
+  --warn: #8a5a00;
+  --err: #9b2d20;
+  --font-sans: "Hanken Grotesk", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --gutter-l: max(16px, env(safe-area-inset-left, 0px));
+  --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font: 400 16px/1.55 var(--font-sans);
+  padding-left: var(--gutter-l); padding-right: var(--gutter-r);
+  padding-block: env(safe-area-inset-top, 0px) calc(3rem + env(safe-area-inset-bottom, 0px));
+}
+img { max-width: 100%; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.wrap { max-width: 72rem; margin-inline: auto; }
+
+/* Kopf */
+.topbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; padding-block: 1.25rem; border-bottom: 1px solid var(--rule); }
+.brand { font-size: 0.95rem; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; }
+.topnav { display: flex; gap: 1.5rem; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; }
+.topnav a { color: var(--ink); text-decoration: none; }
+.topnav a:hover { text-decoration: underline; text-underline-offset: 4px; }
+
+/* Einstieg */
+.hero { display: grid; gap: 1rem; padding-block: clamp(2.5rem, 7vw, 5rem) 2.5rem; }
+.eyebrow { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-soft); }
+.hero h1 { margin: 0; font-size: clamp(2.4rem, 7vw, 4.5rem); font-weight: 300; letter-spacing: -0.03em; line-height: 1; text-wrap: balance; }
+.hero p { margin: 0; max-width: 34rem; font-size: 1.1rem; color: var(--ink-soft); }
+.hero .btn { justify-self: start; margin-top: 0.75rem; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 0.55rem 1.4rem;
+  background: var(--ink); color: var(--paper); border: 1px solid var(--ink); border-radius: 0; cursor: pointer;
+  font-size: 0.8rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none;
+}
+.btn.ghost { background: transparent; color: var(--ink); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+section { padding-block: 3rem; border-top: 1px solid var(--rule); }
+h2 { margin: 0 0 0.4rem; font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 300; letter-spacing: -0.02em; line-height: 1.1; text-wrap: balance; }
+.lead { margin: 0 0 2rem; color: var(--ink-soft); max-width: 40rem; }
+
+/* Modelle */
+.models { display: grid; gap: 2.5rem 1.5rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); }
+.model { display: grid; gap: 1rem; align-content: start; }
+@supports (grid-template-rows: subgrid) {
+  .models { grid-auto-rows: auto; }
+  .model { grid-row: span 4; grid-template-rows: subgrid; row-gap: 1rem; }
+}
+.pic { position: relative; aspect-ratio: 4 / 3; max-width: 100%; display: grid; place-items: center; overflow: hidden; background: var(--stone); }
+.pic:has(img) { background: var(--paper); }
+.pic img { width: 100%; height: 100%; object-fit: contain; }
+.pic svg { width: 80%; height: auto; color: var(--ink); }
+.model h3 { margin: 0; font-size: 1.5rem; font-weight: 400; letter-spacing: -0.01em; line-height: 1.15; }
+.specs { margin: 0; display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--rule); }
+.specs div { padding: 0.55rem 0; border-bottom: 1px solid var(--rule); min-width: 0; }
+.specs div:nth-child(odd) { padding-right: 0.75rem; }
+.specs dt { font-size: 0.66rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft); }
+.specs dd { margin: 0; font-variant-numeric: tabular-nums; }
+.model .btn { justify-self: start; }
+
+.colors { display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; margin-top: 2.5rem; }
+.color { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; }
+.swatch { width: 1rem; height: 1rem; border-radius: 50%; background: var(--sw); border: 1px solid var(--rule); flex: none; }
+.small { font-size: 0.8rem; color: var(--ink-soft); margin: 1rem 0 0; }
+
+/* Größen */
+.sizes { display: grid; gap: 2rem; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 52rem) { .sizes { grid-template-columns: minmax(0, 22rem) minmax(0, 1fr); } }
+.size-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.size-table th, .size-table td { text-align: left; padding: 0.8rem 0.5rem 0.8rem 0; border-bottom: 1px solid var(--rule); }
+.size-table th { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft); }
+.size-table td:first-child { font: 500 1.1rem var(--font-mono); width: 4rem; }
+.size-table tr.hit td { background: var(--stone); }
+.calc { display: grid; gap: 0.75rem; padding: 1.5rem; background: var(--stone); }
+.calc output { font-size: 1.1rem; min-height: 1.6em; }
+
+/* Formular */
+label.f { display: grid; gap: 0.35rem; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); }
+input[type="text"], input[type="email"], input[type="tel"], input[type="number"], input[type="date"], select, textarea {
+  width: 100%; min-height: 46px; padding: 0.6rem 0.75rem; background: var(--paper); color: var(--ink);
+  border: 1px solid var(--rule); border-radius: 0; font-size: 1rem; font-weight: 400; letter-spacing: 0; text-transform: none;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--ink); outline: none; }
+textarea { resize: vertical; min-height: 6rem; }
+.form { display: grid; gap: 1.25rem; grid-template-columns: 1fr 1fr; max-width: 46rem; }
+.form .full { grid-column: 1 / -1; }
+@media (max-width: 34rem) { .form { grid-template-columns: 1fr; } }
+.check { display: flex; gap: 0.75rem; align-items: flex-start; font-size: 0.9rem; color: var(--ink-soft); }
+.check a { color: var(--ink); }
+.check input { width: 1.2rem; height: 1.2rem; margin-top: 0.15rem; flex: none; accent-color: var(--ink); }
+.field-note { display: grid; gap: 0.4rem; max-width: 22rem; }
+.form-error { margin: 0; color: var(--err); font-size: 0.9rem; }
+.form-note { margin: 0; color: var(--ink-soft); font-size: 0.85rem; }
+.done { max-width: 40rem; padding: 1.5rem; background: var(--stone); }
+.done h3 { margin: 0 0 0.4rem; font-size: 1.3rem; font-weight: 400; }
+.done p { margin: 0; }
+
+footer { padding-top: 2rem; border-top: 1px solid var(--rule); font-size: 0.85rem; color: var(--ink-soft); display: flex; flex-wrap: wrap; gap: 0.5rem 2rem; justify-content: space-between; }
+footer a { color: var(--ink-soft); }
+</style>
+</head>
+<body>
+
+<header class="wrap topbar">
+  <span class="brand" id="brand">pedalwerk</span>
+  <nav class="topnav" aria-label="Seitenbereiche">
+    <a href="#modelle">Modelle</a>
+    <a href="#groessen">Größen</a>
+    <a href="#anfrage">Anfrage</a>
+  </nav>
+</header>
+
+<main class="wrap">
+  <div class="hero">
+    <span class="eyebrow">E-Bike-Verleih · Riese &amp; Müller</span>
+    <h1>Nevo5 mieten</h1>
+    <p>Komfortabler Tiefeinstieg, Riemenantrieb und Bosch-Motor. Drei Varianten in vier Rahmengrößen für Körpergrößen von 155 bis 210 cm.</p>
+    <a class="btn" href="#anfrage">Unverbindlich anfragen</a>
+  </div>
+
+  <section id="modelle" aria-labelledby="h-modelle">
+    <h2 id="h-modelle">Modelle</h2>
+    <p class="lead">Alle Räder sind Tiefeinsteiger mit Riemenantrieb. Sie unterscheiden sich in Motor, Akku und Schaltung.</p>
+    <div class="models" id="models"></div>
+    <div class="colors" id="colors" aria-label="Verfügbare Farben"></div>
+    <p class="small">Die Bilder sind Beispielbilder. Die genaue Ausstattung kann abweichen, maßgeblich sind Modell und Farbe. Welche Farbe gerade frei ist, bestätigen wir mit deiner Anfrage.</p>
+  </section>
+
+  <section id="groessen" aria-labelledby="h-groessen">
+    <h2 id="h-groessen">Welche Größe passt?</h2>
+    <p class="lead">Die Rahmengröße richtet sich nach deiner Körpergröße. Liegst du zwischen zwei Größen, beraten wir dich gern bei der Abholung.</p>
+    <div class="sizes">
+      <div class="calc">
+        <label class="f" for="calc-h">Deine Körpergröße (cm)
+          <input id="calc-h" type="number" inputmode="numeric" min="140" max="220" placeholder="z. B. 178">
+        </label>
+        <output id="calc-out" for="calc-h" aria-live="polite"></output>
+      </div>
+      <table class="size-table">
+        <thead><tr><th scope="col">Rahmen</th><th scope="col">Körpergröße</th></tr></thead>
+        <tbody id="size-rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="anfrage" aria-labelledby="h-anfrage">
+    <h2 id="h-anfrage">Reservierung anfragen</h2>
+    <p class="lead">Schick uns deinen Wunschzeitraum. Wir prüfen die Verfügbarkeit und melden uns zur Bestätigung. Die Anfrage ist unverbindlich.</p>
+
+    <form id="form" class="form" novalidate>
+      <label class="f" for="r-modell">Modell
+        <select id="r-modell" name="modell" required></select>
+      </label>
+      <label class="f" for="r-rahmen">Rahmengröße
+        <select id="r-rahmen" name="rahmen" required></select>
+      </label>
+      <label class="f" for="r-farbe">Farbwunsch
+        <select id="r-farbe" name="farbe"></select>
+      </label>
+      <label class="f" for="r-anzahl">Anzahl Räder
+        <input id="r-anzahl" name="anzahl" type="number" inputmode="numeric" min="1" max="10" value="1" required>
+      </label>
+      <label class="f" for="r-von">Abholung am
+        <input id="r-von" name="von" type="date" required>
+      </label>
+      <label class="f" for="r-bis">Rückgabe am
+        <input id="r-bis" name="bis" type="date" required>
+      </label>
+      <div class="full field-note">
+        <label class="f" for="r-gewicht">Körpergewicht (kg)
+          <input id="r-gewicht" name="gewicht" type="number" inputmode="numeric" min="30" max="125" placeholder="z. B. 75" required aria-describedby="gewicht-hint">
+        </label>
+        <p id="gewicht-hint" class="form-note">Wir brauchen dein Körpergewicht, um das Rad optimal für dich vorzubereiten, zum Beispiel Federgabel und Reifendruck. Riese &amp; Müller gibt für den Nevo5 ein zulässiges Fahrergewicht von höchstens 125 kg an. Bitte gib dein Gewicht wahrheitsgemäß an: Bei falschen Angaben haftest du für Schäden, die darauf zurückzuführen sind. Bei mehreren Rädern trag bitte das Gewicht pro Person in die Nachricht ein.</p>
+      </div>
+      <label class="f" for="r-name">Name
+        <input id="r-name" name="name" type="text" autocomplete="name" maxlength="80" required>
+      </label>
+      <label class="f" for="r-email">E-Mail
+        <input id="r-email" name="email" type="email" autocomplete="email" maxlength="120" required>
+      </label>
+      <label class="f full" for="r-tel">Telefon (optional)
+        <input id="r-tel" name="telefon" type="tel" autocomplete="tel" maxlength="40">
+      </label>
+      <label class="f full" for="r-msg">Nachricht (optional)
+        <textarea id="r-msg" name="nachricht" maxlength="1000" placeholder="z. B. Körpergröße, Kindersitz gewünscht, Fragen zur Abholung"></textarea>
+      </label>
+      <label class="check full" for="r-ds">
+        <input id="r-ds" name="datenschutz" type="checkbox" required>
+        <span>Ich bin einverstanden, dass meine Angaben zur Bearbeitung der Anfrage gespeichert werden. <a id="ds-link" href="#">Datenschutzerklärung</a></span>
+      </label>
+      <p id="form-error" class="form-error full" role="alert" hidden></p>
+      <div class="full"><button class="btn" type="submit" id="submit">Anfrage senden</button></div>
+      <p id="form-note" class="form-note full"></p>
+    </form>
+
+    <div id="done" class="done" hidden tabindex="-1">
+      <h3 id="done-title">Danke für deine Anfrage</h3>
+      <p id="done-text"></p>
+    </div>
+  </section>
+
+  <footer>
+    <span>© <span id="year"></span> <span id="footer-brand">pedalwerk</span></span>
+    <span><a id="imprint-link" href="#">Impressum</a> · <a id="ds-link-2" href="#">Datenschutz</a></span>
+  </footer>
+</main>
+
+<script>
+"use strict";
+
+/* ==========================================================
+   EINSTELLUNGEN: hier anpassen
+   ========================================================== */
+const CONFIG = {
+  brand: "pedalwerk",
+  // E-Mail-Adresse, an die Anfragen gehen.
+  email: "",                        // z. B. "verleih@pedalwerk.de"
+  // Optional: Formulardienst-Adresse (z. B. Formspree "https://formspree.io/f/abcdwxyz").
+  // Leer = das E-Mail-Programm des Kunden öffnet sich mit der fertigen Anfrage.
+  formEndpoint: "",
+  datenschutzUrl: "#",
+  impressumUrl: "#",
+};
+
+// Gleiche Daten wie im internen Portal.
+const MODELLE = [
+  { name: "Nevo5 silent CORE",    motor: "Bosch Performance Line",    nm: 75, wh: 540, schaltung: "Nexus-5",  info: "Shimano Nexus 5-Gang, Riemenantrieb" },
+  { name: "Nevo5 rücktritt CORE", motor: "Bosch Performance Line",    nm: 75, wh: 540, schaltung: "Nexus-5R", info: "Shimano Nexus 5-Gang mit Rücktritt, Riemenantrieb" },
+  { name: "Nevo5 vario CORE",     motor: "Bosch Performance Line PX", nm: 90, wh: 720, schaltung: "Enviolo",  info: "Enviolo stufenlos, Riemenantrieb" },
+];
+const RAHMEN_GROESSEN = { S: [155, 170], M: [165, 180], L: [175, 190], XL: [185, 210] };
+// Bilder: lege Fotos als bilder/<datei>.jpg ins Repo. Fehlt eine Datei, erscheint eine Strichzeichnung.
+const FARBEN = [
+  { name: "Ice Blue",   hex: "#b9d3df", bild: "bilder/ice-blue.jpg" },
+  { name: "Pure White", hex: "#f4f4f2", bild: "bilder/pure-white.jpg" },
+  { name: "Ruby Red",   hex: "#8e1f2c", bild: "bilder/ruby-red.jpg" },
+  { name: "Slate Grey", hex: "#5b6066", bild: "bilder/slate-grey.jpg" },
+];
+// Welches Farbbild auf welcher Modellkachel gezeigt wird.
+const MODELL_BILD = ["Ice Blue", "Ruby Red", "Slate Grey"];
+
+/* ========================================================== */
+
+const $ = (s) => document.querySelector(s);
+function el(tag, props = {}, ...children) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (v == null || v === false) continue;
+    if (k === "class") n.className = v;
+    else if (k === "text") n.textContent = v;
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else n.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of children.flat()) if (c != null && c !== false) n.append(c);
+  return n;
+}
+
+function drawing() {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 200 120"); svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("fill", "none"); svg.setAttribute("stroke", "currentColor"); svg.setAttribute("stroke-width", "1.6");
+  svg.setAttribute("stroke-linecap", "round"); svg.setAttribute("stroke-linejoin", "round");
+  svg.innerHTML = `<circle cx="50" cy="82" r="30"/><circle cx="150" cy="82" r="30"/>
+    <path d="M50 82 L96 84 L86 40"/><path d="M50 82 L86 40"/><path d="M96 84 Q110 62 134 46"/>
+    <path d="M134 46 L150 82"/><path d="M78 35 H96"/><path d="M134 46 L130 32 L143 30"/>
+    <path d="M101 76 Q112 62 126 52" stroke-width="6"/><circle cx="96" cy="84" r="5"/>`;
+  return svg;
+}
+function picture(farbName, alt) {
+  const box = el("div", { class: "pic" });
+  const f = FARBEN.find((x) => x.name === farbName);
+  if (f && f.bild) {
+    const img = el("img", { src: f.bild, alt, loading: "lazy" });
+    img.addEventListener("error", () => img.replaceWith(drawing()));
+    box.append(img);
+  } else box.append(drawing());
+  return box;
+}
+const sizeFor = (h) => Object.entries(RAHMEN_GROESSEN).filter(([, [a, z]]) => h >= a && h <= z).map(([k]) => k);
+const fmt = (iso) => iso ? new Date(iso + "T12:00:00").toLocaleDateString("de-DE") : "";
+
+/* ----- Modelle, Farben, Größen ----- */
+function renderModels() {
+  $("#models").replaceChildren(...MODELLE.map((m, i) => {
+    const item = (dt, dd) => el("div", {}, el("dt", { text: dt }), el("dd", { text: dd }));
+    return el("article", { class: "model" },
+      picture(MODELL_BILD[i], m.name),
+      el("h3", { text: m.name }),
+      el("dl", { class: "specs" },
+        item("Motor", m.motor), item("Drehmoment", `${m.nm} Nm`),
+        item("Akku", `${m.wh} Wh`), item("Schaltung", m.schaltung)
+      ),
+      el("a", { class: "btn ghost", href: "#anfrage", text: "Dieses Modell anfragen", onclick: () => { $("#r-modell").value = m.name; } })
+    );
+  }));
+  $("#colors").replaceChildren(el("span", { class: "eyebrow", text: "Farben" }),
+    ...FARBEN.map((f) => el("span", { class: "color" }, el("span", { class: "swatch", style: `--sw:${f.hex}`, "aria-hidden": "true" }), f.name)));
+}
+
+function renderSizes(highlight = []) {
+  $("#size-rows").replaceChildren(...Object.entries(RAHMEN_GROESSEN).map(([k, [a, z]]) =>
+    el("tr", { class: highlight.includes(k) ? "hit" : null }, el("td", { text: k }), el("td", { text: `${a}–${z} cm` }))));
+}
+function updateCalc() {
+  const h = parseInt($("#calc-h").value, 10);
+  const out = $("#calc-out");
+  if (!h) { out.textContent = ""; renderSizes(); return; }
+  const s = sizeFor(h);
+  out.textContent = s.length ? `Für ${h} cm passt Rahmengröße ${s.join(" oder ")}.` : "Für diese Körpergröße haben wir leider kein passendes Rad.";
+  renderSizes(s);
+  if (s.length === 1) $("#r-rahmen").value = s[0];
+}
+
+/* ----- Formular ----- */
+function fillSelects() {
+  const opts = (sel, list, first) => sel.replaceChildren(...(first ? [el("option", { value: "", text: first })] : []), ...list.map((v) => el("option", { value: v, text: v })));
+  opts($("#r-modell"), MODELLE.map((m) => m.name), "Modell wählen");
+  $("#r-rahmen").replaceChildren(el("option", { value: "", text: "Größe wählen" }),
+    ...Object.entries(RAHMEN_GROESSEN).map(([k, [a, z]]) => el("option", { value: k, text: `${k} · ${a}–${z} cm` })));
+  opts($("#r-farbe"), FARBEN.map((f) => f.name), "Egal");
+  const today = new Date(); today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+  const iso = today.toISOString().slice(0, 10);
+  $("#r-von").min = iso; $("#r-bis").min = iso;
+}
+
+function readForm() {
+  const v = (id) => $(id).value.trim();
+  return {
+    modell: v("#r-modell"), rahmen: v("#r-rahmen"), farbe: v("#r-farbe") || "egal",
+    anzahl: v("#r-anzahl"), von: v("#r-von"), bis: v("#r-bis"), gewicht: v("#r-gewicht"),
+    name: v("#r-name"), email: v("#r-email"), telefon: v("#r-tel"), nachricht: v("#r-msg"),
+  };
+}
+function validate(d) {
+  const today = $("#r-von").min;
+  if (!d.modell) return ["#r-modell", "Bitte ein Modell wählen."];
+  if (!d.rahmen) return ["#r-rahmen", "Bitte eine Rahmengröße wählen. Der Größenrechner oben hilft dabei."];
+  const n = parseInt(d.anzahl, 10);
+  if (!(n >= 1 && n <= 10)) return ["#r-anzahl", "Bitte zwischen 1 und 10 Räder angeben."];
+  if (!d.von) return ["#r-von", "Bitte das Abholdatum eintragen."];
+  if (d.von < today) return ["#r-von", "Das Abholdatum liegt in der Vergangenheit."];
+  if (!d.bis) return ["#r-bis", "Bitte das Rückgabedatum eintragen."];
+  if (d.bis < d.von) return ["#r-bis", "Die Rückgabe liegt vor der Abholung."];
+  // Höchstgewicht Fahrer/in laut Riese & Müller. Zulässiges Gesamtgewicht des Rads: 160 kg.
+  const MAX_KG = 125;
+  const kg = parseInt(d.gewicht, 10);
+  if (!(kg >= 30)) return ["#r-gewicht", "Bitte dein Körpergewicht in kg eintragen. Wir brauchen es, um das Rad passend vorzubereiten."];
+  if (kg > MAX_KG) return ["#r-gewicht", `Riese & Müller lässt den Nevo5 für ein Fahrergewicht bis ${MAX_KG} kg zu. Darüber können wir das Rad leider nicht verleihen. Ruf uns gern an, wenn du Fragen hast.`];
+  if (!d.name) return ["#r-name", "Bitte deinen Namen eintragen."];
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)) return ["#r-email", "Bitte eine gültige E-Mail-Adresse eintragen."];
+  if (!$("#r-ds").checked) return ["#r-ds", "Bitte der Speicherung deiner Angaben zustimmen."];
+  return null;
+}
+function mailText(d) {
+  return [
+    "Reservierungsanfrage",
+    "",
+    `Modell: ${d.modell}`, `Rahmengröße: ${d.rahmen}`, `Farbwunsch: ${d.farbe}`, `Anzahl: ${d.anzahl}`,
+    `Zeitraum: ${fmt(d.von)} bis ${fmt(d.bis)}`,
+    `Körpergewicht: ${d.gewicht} kg`,
+    "",
+    `Name: ${d.name}`, `E-Mail: ${d.email}`, `Telefon: ${d.telefon || "–"}`,
+    "", "Nachricht:", d.nachricht || "–",
+  ].join("\n");
+}
+function showDone(d, viaMail) {
+  $("#form").hidden = true;
+  $("#done-title").textContent = viaMail ? "Fast geschafft" : "Danke für deine Anfrage";
+  $("#done-text").textContent = viaMail
+    ? `Dein E-Mail-Programm hat sich mit der fertigen Anfrage geöffnet. Bitte schick die E-Mail ab. Falls sich nichts geöffnet hat, schreib uns an ${CONFIG.email}.`
+    : `Wir haben deine Anfrage für ${d.anzahl} × ${d.modell} (${d.rahmen}) vom ${fmt(d.von)} bis ${fmt(d.bis)} erhalten und melden uns per E-Mail an ${d.email}.`;
+  $("#done").hidden = false;
+  $("#done").focus();
+}
+
+async function submit(e) {
+  e.preventDefault();
+  const errBox = $("#form-error");
+  const d = readForm();
+  const problem = validate(d);
+  if (problem) { errBox.textContent = problem[1]; errBox.hidden = false; $(problem[0]).focus(); return; }
+  errBox.hidden = true;
+
+  if (CONFIG.formEndpoint) {
+    const btn = $("#submit");
+    btn.disabled = true; btn.textContent = "Wird gesendet …";
+    try {
+      const res = await fetch(CONFIG.formEndpoint, { method: "POST", headers: { Accept: "application/json", "Content-Type": "application/json" }, body: JSON.stringify({ ...d, _subject: `Reservierungsanfrage ${d.modell}`, _replyto: d.email }) });
+      if (!res.ok) throw new Error(String(res.status));
+      showDone(d, false);
+    } catch {
+      errBox.textContent = CONFIG.email
+        ? `Die Anfrage konnte gerade nicht gesendet werden. Bitte versuch es noch einmal oder schreib uns an ${CONFIG.email}.`
+        : "Die Anfrage konnte gerade nicht gesendet werden. Bitte versuch es gleich noch einmal.";
+      errBox.hidden = false;
+    } finally { btn.disabled = false; btn.textContent = "Anfrage senden"; }
+    return;
+  }
+  if (!CONFIG.email) { errBox.textContent = "Anfragen sind gerade nicht möglich: Es ist noch keine E-Mail-Adresse eingerichtet."; errBox.hidden = false; return; }
+  const subject = encodeURIComponent(`Reservierungsanfrage ${d.modell} (${d.rahmen}), ${fmt(d.von)}–${fmt(d.bis)}`);
+  location.href = `mailto:${CONFIG.email}?subject=${subject}&body=${encodeURIComponent(mailText(d))}`;
+  showDone(d, true);
+}
+
+/* ----- Start ----- */
+function boot() {
+  document.title = `Nevo5 mieten · ${CONFIG.brand}`;
+  $("#brand").textContent = CONFIG.brand; $("#footer-brand").textContent = CONFIG.brand;
+  $("#year").textContent = new Date().getFullYear();
+  for (const id of ["#ds-link", "#ds-link-2"]) $(id).href = CONFIG.datenschutzUrl;
+  $("#imprint-link").href = CONFIG.impressumUrl;
+  $("#form-note").textContent = CONFIG.formEndpoint ? "" : CONFIG.email ? "Beim Absenden öffnet sich dein E-Mail-Programm mit der fertigen Anfrage." : "";
+  renderModels(); renderSizes(); fillSelects();
+  $("#calc-h").addEventListener("input", updateCalc);
+  $("#r-von").addEventListener("change", () => { $("#r-bis").min = $("#r-von").value || $("#r-von").min; });
+  $("#form").addEventListener("submit", submit);
+}
+boot();
+</script>
+</body>
+</html>
