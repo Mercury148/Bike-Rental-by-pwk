@@ -82,7 +82,20 @@ h2 { margin: 0 0 0.4rem; font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 300
 .specs div:nth-child(odd) { padding-right: 0.75rem; }
 .specs dt { font-size: 0.66rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft); }
 .specs dd { margin: 0; font-variant-numeric: tabular-nums; }
-.model .btn { justify-self: start; }
+.model .btn { justify-self: start; pointer-events: none; }
+/* Ganze Kachel anklickbar (auch per Tastatur). Gewählte Kachel bekommt einen schwarzen Rahmen ums Bild. */
+.model { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.model:hover .pic img, .model:hover .pic svg { transform: scale(1.02); }
+.pic img, .pic svg { transition: transform 0.35s ease; }
+.model[aria-pressed="true"] .pic { outline: 2px solid var(--ink); outline-offset: -2px; }
+.model[aria-pressed="true"] .btn { background: var(--ink); color: var(--paper); }
+@media (prefers-reduced-motion: reduce) { .pic img, .pic svg { transition: none; } }
+.size-table tbody tr { cursor: pointer; }
+.size-table tbody tr:hover td { background: var(--stone); }
+.size-table tr.picked td { background: var(--ink); color: var(--paper); }
+.calc-row { display: flex; gap: 0.5rem; }
+.calc-row input { flex: 1; min-width: 0; }
+.calc-choices { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
 .colors { display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; margin-top: 2.5rem; }
 .color { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; }
@@ -102,6 +115,8 @@ h2 { margin: 0 0 0.4rem; font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 300
 
 /* Tally-Formular */
 .tally-wrap { max-width: 46rem; margin-bottom: 1rem; }
+.prefill { max-width: 46rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 1rem; padding: 0.9rem 1.1rem; margin-bottom: 1rem; background: var(--stone); font-size: 0.95rem; }
+.prefill .btn { min-height: 40px; padding: 0.4rem 1rem; }
 .tally-wrap iframe { display: block; width: 100%; border: 0; }
 /* Felder (Größenrechner) */
 label.f { display: grid; gap: 0.35rem; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); }
@@ -132,8 +147,6 @@ footer a { color: var(--ink-soft); }
   <div class="hero">
     <span class="eyebrow">E-Bike-Verleih · Riese &amp; Müller</span>
     <h1>Nevo5 mieten</h1>
-    <p>Komfortabler Tiefeinstieg, Riemenantrieb und Bosch-Motor. Drei Varianten in vier Rahmengrößen für Körpergrößen von 155 bis 210 cm.</p>
-    <a class="btn" href="#anfrage">Unverbindlich anfragen</a>
   </div>
 
   <section id="modelle" aria-labelledby="h-modelle">
@@ -149,10 +162,13 @@ footer a { color: var(--ink-soft); }
     <p class="lead">Die Rahmengröße richtet sich nach deiner Körpergröße. Liegst du zwischen zwei Größen, beraten wir dich gern bei der Abholung.</p>
     <div class="sizes">
       <div class="calc">
-        <label class="f" for="calc-h">Deine Körpergröße (cm)
-          <input id="calc-h" type="number" inputmode="numeric" min="140" max="220" placeholder="z. B. 178">
-        </label>
+        <label class="f" for="calc-h">Deine Körpergröße (cm)</label>
+        <form id="calc-form" class="calc-row" novalidate>
+          <input id="calc-h" type="number" inputmode="numeric" enterkeyhint="next" min="140" max="220" placeholder="z. B. 178">
+          <button class="btn" type="submit">Weiter</button>
+        </form>
         <output id="calc-out" for="calc-h" aria-live="polite"></output>
+        <div id="calc-choices" class="calc-choices" hidden></div>
       </div>
       <table class="size-table">
         <thead><tr><th scope="col">Rahmen</th><th scope="col">Körpergröße</th></tr></thead>
@@ -165,6 +181,10 @@ footer a { color: var(--ink-soft); }
     <h2 id="h-anfrage">Reservierung anfragen</h2>
     <p class="lead">Schick uns deinen Wunschzeitraum. Wir prüfen die Verfügbarkeit und melden uns zur Bestätigung. Die Anfrage ist unverbindlich.</p>
 
+    <div id="prefill" class="prefill" hidden aria-live="polite">
+      <span id="prefill-text"></span>
+      <button id="prefill-apply" class="btn ghost" type="button" hidden>Ins Formular übernehmen</button>
+    </div>
     <div class="tally-wrap">
       <iframe id="tally-form" data-tally-src="https://tally.so/embed/0VVqqQ?alignLeft=1&amp;hideTitle=1&amp;transparentBackground=1&amp;dynamicHeight=1" loading="lazy" width="100%" height="1600" frameborder="0" marginheight="0" marginwidth="0" title="Reservierung anfragen"></iframe>
     </div>
@@ -251,14 +271,19 @@ const fmt = (iso) => iso ? new Date(iso + "T12:00:00").toLocaleDateString("de-DE
 function renderModels() {
   $("#models").replaceChildren(...MODELLE.map((m, i) => {
     const item = (dt, dd) => el("div", {}, el("dt", { text: dt }), el("dd", { text: dd }));
-    return el("article", { class: "model" },
+    return el("article", {
+      class: "model", role: "button", tabindex: "0", "aria-pressed": "false", "data-modell": m.name,
+      "aria-label": `${m.name} auswählen und weiter zur Größe`,
+      onclick: () => pickModel(m.name),
+      onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pickModel(m.name); } },
+    },
       picture(MODELL_BILD[i], m.name),
       el("h3", { text: m.name }),
       el("dl", { class: "specs" },
         item("Motor", m.motor), item("Drehmoment", `${m.nm} Nm`),
         item("Akku", `${m.wh} Wh`), item("Schaltung", m.schaltung)
       ),
-      el("a", { class: "btn ghost", href: "#anfrage", text: "Dieses Modell anfragen", })
+      el("span", { class: "btn ghost", "aria-hidden": "true", text: "Dieses Modell wählen" })
     );
   }));
   $("#colors").replaceChildren(el("span", { class: "eyebrow", text: "Farben" }),
@@ -267,7 +292,12 @@ function renderModels() {
 
 function renderSizes(highlight = []) {
   $("#size-rows").replaceChildren(...Object.entries(RAHMEN_GROESSEN).map(([k, [a, z]]) =>
-    el("tr", { class: highlight.includes(k) ? "hit" : null }, el("td", { text: k }), el("td", { text: `${a}–${z} cm` }))));
+    el("tr", {
+      class: wahl.rahmen === k ? "picked" : highlight.includes(k) ? "hit" : null,
+      tabindex: "0", "aria-label": `Rahmengröße ${k} wählen`,
+      onclick: () => pickSize(k),
+      onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pickSize(k); } },
+    }, el("td", { text: k }), el("td", { text: `${a}–${z} cm` }))));
 }
 function updateCalc() {
   const h = parseInt($("#calc-h").value, 10);
@@ -276,6 +306,80 @@ function updateCalc() {
   const s = sizeFor(h);
   out.textContent = s.length ? `Für ${h} cm passt Rahmengröße ${s.join(" oder ")}.` : "Für diese Körpergröße haben wir leider kein passendes Rad.";
   renderSizes(s);
+  $("#calc-choices").hidden = true;
+}
+
+/* ----- Ablauf: Modell → Größe → Formular ----- */
+function scrollToEl(node) {
+  const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  node.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "start" });
+}
+function pickModel(name) {
+  choose({ modell: name });
+  document.querySelectorAll(".model").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.modell === name)));
+  scrollToEl($("#groessen"));
+  // Fokus ins Größenfeld, ohne dass der Browser dabei selbst springt (öffnet auf dem Handy die Zahlentastatur).
+  setTimeout(() => $("#calc-h").focus({ preventScroll: true }), 350);
+}
+function pickSize(k) {
+  choose({ rahmen: k });
+  renderSizes();
+  $("#calc-choices").hidden = true;
+  $("#calc-out").textContent = `Rahmengröße ${k} ist gemerkt.`;
+  scrollToEl($("#anfrage"));
+}
+// „Weiter“ bzw. Eingabetaste im Größenfeld: eindeutige Größe übernehmen, bei zwei Größen nachfragen.
+function submitHeight(e) {
+  e.preventDefault();
+  const h = parseInt($("#calc-h").value, 10);
+  const s = h ? sizeFor(h) : [];
+  if (!h) { $("#calc-out").textContent = "Bitte deine Körpergröße in cm eintragen."; return; }
+  if (!s.length) { $("#calc-out").textContent = "Für diese Körpergröße haben wir leider kein passendes Rad. Ruf uns gern an."; return; }
+  if (s.length === 1) { $("#calc-h").blur(); pickSize(s[0]); return; }
+  $("#calc-out").textContent = `Für ${h} cm passen ${s.join(" und ")}. Welche Größe möchtest du?`;
+  $("#calc-choices").replaceChildren(...s.map((k) => el("button", { class: "btn ghost", type: "button", text: `Rahmen ${k}`, onclick: () => { $("#calc-h").blur(); pickSize(k); } })));
+  $("#calc-choices").hidden = false;
+}
+
+/* ----- Formular vorausfüllen -----
+   Tally übernimmt Modell und Rahmengröße aus den versteckten Feldern „modell“ und „rahmen“.
+   Der Wert muss exakt dem Text der Auswahl im Tally-Formular entsprechen. */
+const TALLY_BASE = "https://tally.so/embed/0VVqqQ?alignLeft=1&hideTitle=1&transparentBackground=1&dynamicHeight=1";
+const rahmenLabel = (k) => k && RAHMEN_GROESSEN[k] ? `${k} · ${RAHMEN_GROESSEN[k][0]}–${RAHMEN_GROESSEN[k][1]} cm` : "";
+const wahl = { modell: "", rahmen: "" };
+let formTouched = false;   // hat jemand schon im Formular getippt? Dann nicht ungefragt neu laden.
+
+function tallyUrl() {
+  // encodeURIComponent statt URLSearchParams: Leerzeichen als %20, nicht als „+“.
+  const q = [];
+  if (wahl.modell) q.push("modell=" + encodeURIComponent(wahl.modell));
+  if (wahl.rahmen) q.push("rahmen=" + encodeURIComponent(rahmenLabel(wahl.rahmen)));
+  const extra = q.join("&");
+  return extra ? `${TALLY_BASE}&${extra}` : TALLY_BASE;
+}
+function reloadForm() {
+  const f = $("#tally-form");
+  f.dataset.tallySrc = tallyUrl();
+  if (f.getAttribute("src")) f.src = f.dataset.tallySrc;   // sonst lädt loadTally() es mit der neuen Adresse
+  formTouched = false;
+  $("#prefill-apply").hidden = true;
+}
+function choose(change, sizes = null) {
+  const before = tallyUrl();
+  Object.assign(wahl, change);
+  const parts = [];
+  if (wahl.modell) parts.push(wahl.modell);
+  if (wahl.rahmen) parts.push(`Rahmengröße ${wahl.rahmen}`);
+  else if (sizes && sizes.length > 1) parts.push(`Rahmengröße ${sizes.join(" oder ")} (bitte im Formular wählen)`);
+  $("#prefill").hidden = parts.length === 0;
+  if (tallyUrl() === before) { $("#prefill-text").textContent = parts.length ? `Vorausgewählt: ${parts.join(" · ")}.` : ""; return; }
+  if (formTouched) {
+    $("#prefill-text").textContent = `Deine Auswahl: ${parts.join(" · ")}.`;
+    $("#prefill-apply").hidden = false;   // nicht ungefragt neu laden, sonst gehen Eingaben verloren
+  } else {
+    $("#prefill-text").textContent = `Vorausgewählt: ${parts.join(" · ")}. Du kannst es im Formular noch ändern.`;
+    reloadForm();
+  }
 }
 
 /* ----- Start ----- */
@@ -287,6 +391,10 @@ function boot() {
   $("#imprint-link").href = CONFIG.impressumUrl;
   renderModels(); renderSizes();
   $("#calc-h").addEventListener("input", updateCalc);
+  $("#calc-form").addEventListener("submit", submitHeight);
+  // Wechselt der Fokus ins Formular, hat der Kunde angefangen auszufüllen.
+  window.addEventListener("blur", () => { setTimeout(() => { if (document.activeElement === $("#tally-form")) formTouched = true; }, 0); });
+  $("#prefill-apply").addEventListener("click", () => { reloadForm(); $("#prefill-text").textContent = $("#prefill-text").textContent.replace("Deine Auswahl", "Vorausgewählt"); });
   loadTally();
 }
 
