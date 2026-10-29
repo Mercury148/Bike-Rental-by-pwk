@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Nevo5 mieten · pedalwerk</title>
+<title>docu-RENT-a · pedalwerk</title>
 <meta name="description" content="E-Bike-Verleih: Riese & Müller Nevo5 in drei Varianten und vier Rahmengrößen. Jetzt unverbindlich anfragen.">
 <!-- Schriften liegen im Repo (fonts/), damit beim Aufruf keine Daten an Google gehen. -->
 <link rel="stylesheet" href="fonts/fonts.css">
@@ -142,8 +142,7 @@ footer a { color: var(--ink-soft); }
 
 <main class="wrap">
   <div class="hero">
-    <span class="eyebrow">E-Bike-Verleih · Riese &amp; Müller</span>
-    <h1>Nevo5 mieten</h1>
+    <h1>docu-RENT-a</h1>
   </div>
 
   <section id="modelle" aria-labelledby="h-modelle">
@@ -340,7 +339,7 @@ function choose(change, sizes = null) {
 
 /* ----- Start ----- */
 function boot() {
-  document.title = `Nevo5 mieten · ${CONFIG.brand}`;
+  document.title = `docu-RENT-a · ${CONFIG.brand}`;
   $("#brand").textContent = CONFIG.brand; $("#footer-brand").textContent = CONFIG.brand;
   $("#year").textContent = new Date().getFullYear();
   for (const id of ["#ds-link", "#ds-link-2"]) $(id).href = CONFIG.datenschutzUrl;
