@@ -69,9 +69,16 @@ h2 { margin: 0 0 0.4rem; font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 300
 .step-prompt .q { font-size: 1.3rem; font-weight: 500; letter-spacing: -0.01em; }
 .step-prompt .hint { font-size: 0.9rem; color: var(--ink-soft); }
 .step-prompt .arrow { display: inline-block; font-size: 1.2rem; line-height: 1; }
+/* „Schritt 1/2/3“: kleines Etikett vor der Frage. Der aktuelle Schritt ist schwarz gefüllt,
+   die anderen sind nur umrandet und etwas zurückgenommen. */
+.step-no { align-self: center; font: 500 0.72rem/1 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 0.35rem 0.55rem; border: 1px solid var(--ink); color: var(--ink); white-space: nowrap; transition: background 0.3s ease, color 0.3s ease; }
+.step-prompt.active .step-no { background: var(--ink); color: var(--paper); }
+.step-prompt { transition: opacity 0.3s ease; }
+.step-prompt:not(.active) { opacity: 0.6; }
+.step-prompt:not(.active) .arrow { display: none; }
 @media (prefers-reduced-motion: no-preference) {
-  .step-prompt .arrow { animation: nudge 1.6s ease-in-out infinite; }
-  .step-prompt.fresh { animation: appear 0.5s ease-out; }
+  .step-prompt.active .arrow { animation: nudge 1.6s ease-in-out infinite; }
 }
 /* Zwei schmale Balken links und rechts markieren den aktuellen Schritt:
    erst die Räder, nach der Wahl die Größen, dann das Formular. Sie gleiten mit. */
@@ -98,7 +105,6 @@ h2 { margin: 0 0 0.4rem; font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 300
 .to-top:hover { background: #2a2a2a; }
 @media (prefers-reduced-motion: reduce) { .to-top { transition: none; transform: none; } }
 @keyframes nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
-@keyframes appear { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 
 /* Modelle */
 .models { display: grid; gap: 2.5rem 1.5rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); }
@@ -147,7 +153,12 @@ h2 { margin: 0 0 0.4rem; font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 300
 /* Größen */
 
 /* Tally-Formular */
-.tally-wrap { max-width: 46rem; margin-bottom: 1rem; }
+/* Formular ist eingeklappt, bis eine Größe gewählt ist, und klappt dann auf. */
+.tally-wrap { max-width: 46rem; display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.7s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.tally-inner { min-height: 0; overflow: hidden; }
+#anfrage.open .tally-wrap { grid-template-rows: 1fr; margin-bottom: 1rem; }
+#anfrage.open { min-height: 100vh; }   /* damit die Seite sofort bis zum Trennstrich scrollen kann */
+@media (prefers-reduced-motion: reduce) { .tally-wrap { transition: none; } }
 .prefill { max-width: 46rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 1rem; padding: 0.9rem 1.1rem; margin-bottom: 1rem; background: var(--stone); font-size: 0.95rem; }
 .prefill .btn { min-height: 40px; padding: 0.4rem 1rem; }
 .tally-wrap iframe { display: block; width: 100%; border: 0; }
@@ -161,7 +172,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--ink); outline: n
 textarea { resize: vertical; min-height: 6rem; }
 .form-note { margin: 0; color: var(--ink-soft); font-size: 0.85rem; }
 
-footer { padding-top: 2rem; border-top: 1px solid var(--rule); font-size: 0.85rem; color: var(--ink-soft); display: flex; flex-wrap: wrap; gap: 0.5rem 2rem; justify-content: space-between; }
+footer { padding-top: 2rem; padding-bottom: 4.5rem; border-top: 1px solid var(--rule); font-size: 0.85rem; color: var(--ink-soft); display: flex; flex-wrap: wrap; gap: 0.5rem 2rem; justify-content: space-between; }
 footer a { color: var(--ink-soft); }
 </style>
 </head>
@@ -184,7 +195,8 @@ footer a { color: var(--ink-soft); }
   <section id="modelle" aria-labelledby="h-modelle">
     <h2 id="h-modelle">Modelle</h2>
     <p class="lead">Alle Räder sind Tiefeinsteiger mit Riemenantrieb. Sie unterscheiden sich in Motor, Akku und Schaltung.</p>
-    <p class="step-prompt" id="prompt-model">
+    <p class="step-prompt active" id="prompt-model">
+      <span class="step-no">Schritt 1</span>
       <span class="arrow" aria-hidden="true">↓</span>
       <span class="q">Welches Modell möchtest du ausleihen?</span>
       <span class="hint">Tippe auf eines der drei Räder.</span>
@@ -197,7 +209,8 @@ footer a { color: var(--ink-soft); }
   <section id="groessen" aria-labelledby="h-groessen">
     <h2 id="h-groessen">Rahmengröße</h2>
     <p class="lead">Die Rahmengröße richtet sich nach deiner Körpergröße.</p>
-    <p class="step-prompt" id="prompt-size" hidden>
+    <p class="step-prompt" id="prompt-size">
+      <span class="step-no">Schritt 2</span>
       <span class="arrow" aria-hidden="true">↓</span>
       <span class="q">Welche Größe passt dir?</span>
       <span class="hint">Tippe auf deine Größe, dann geht es weiter zur Anfrage.</span>
@@ -213,9 +226,15 @@ footer a { color: var(--ink-soft); }
       <span id="prefill-text"></span>
       <button id="prefill-apply" class="btn ghost" type="button" hidden>Ins Formular übernehmen</button>
     </div>
-    <div class="tally-wrap">
+    <p class="step-prompt" id="prompt-form">
+      <span class="step-no">Schritt 3</span>
+      <span class="arrow" aria-hidden="true">↓</span>
+      <span class="q">Deine Anfrage</span>
+      <span class="hint" id="form-hint">Wähle zuerst Modell und Größe, dann öffnet sich hier das Formular.</span>
+    </p>
+    <div class="tally-wrap"><div class="tally-inner">
       <iframe id="tally-form" data-tally-src="https://tally.so/embed/0VVqqQ?alignLeft=1&amp;hideTitle=1&amp;transparentBackground=1&amp;dynamicHeight=1" loading="lazy" width="100%" height="1600" frameborder="0" marginheight="0" marginwidth="0" title="Reservierung anfragen"></iframe>
-    </div>
+    </div></div>
     <p class="form-note">Das Formular wird von Tally bereitgestellt (Tally BV, Belgien, Daten auf Servern in der EU). Mehr dazu in unserer <a id="ds-link" href="#">Datenschutzerklärung</a>. Lädt das Formular nicht? <a href="https://tally.so/r/0VVqqQ" target="_blank" rel="noopener">Formular in neuem Tab öffnen</a>.</p>
   </section>
 
@@ -345,7 +364,7 @@ function initToTop() {
 const STEP_AREA = {
   models: ["#prompt-model", "#models"],
   sizes: ["#prompt-size", "#size-grid"],
-  form: [".tally-wrap", ".tally-wrap"],
+  form: ["#prompt-form", ".tally-wrap"],
 };
 const PAD_TOP = 12, PAD_BOTTOM = 20;   // Luft über und unter dem Bereich
 let step = "models";
@@ -366,7 +385,12 @@ function placeBars() {
   Object.assign(stepBg.style, { top: top + "px", height: h + "px", left: xL + "px", width: (xR + 3 - xL) + "px" });
   stepBg.classList.add("on");
 }
-function setStep(s) { step = s; placeBars(); }
+const STEP_PROMPT = { models: "#prompt-model", sizes: "#prompt-size", form: "#prompt-form" };
+function setStep(s) {
+  step = s;
+  Object.entries(STEP_PROMPT).forEach(([k, sel]) => $(sel).classList.toggle("active", k === s));
+  placeBars();
+}
 function initBars() {
   document.body.append(stepBg, ...bars);
   const ro = new ResizeObserver(() => placeBars());
@@ -384,19 +408,18 @@ function scrollToY(y) {
   const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   window.scrollTo({ top: Math.max(0, Math.round(y)), behavior: smooth ? "smooth" : "auto" });
 }
-// Nach der Modellwahl: Trennstrich unter den Größenkacheln an den unteren Bildschirmrand.
-// Ist er schon sichtbar, bleibt die Seite stehen (sonst würde sie auf großen Bildschirmen nach oben springen).
+// Nach der Modellwahl: Trennstrich über „Rahmengröße“ an den oberen Bildschirmrand.
+// Ist die Seite dafür zu kurz (Formular noch eingeklappt), wird der Anfrage-Bereich etwas höher gemacht.
 function scrollSizesIntoView() {
-  const target = lineY($("#anfrage")) + 1 - window.innerHeight;
-  if (target > window.scrollY) scrollToY(target);
+  const y = lineY($("#groessen"));
+  const fehlt = y + window.innerHeight - document.documentElement.scrollHeight;
+  if (fehlt > 0) { const a = $("#anfrage"); a.style.minHeight = Math.ceil(a.getBoundingClientRect().height + fehlt) + "px"; }
+  scrollToY(y);
 }
 // Nach der Größenwahl: Trennstrich über „Reservierung anfragen“ an den oberen Bildschirmrand.
 const scrollFormIntoView = () => scrollToY(lineY($("#anfrage")));
 function pickModel(name) {
   choose({ modell: name });
-  // Hinweis auf die Größenkacheln einblenden (vor dem Scrollen, damit die Position stimmt).
-  const ps = $("#prompt-size");
-  if (ps.hidden) { ps.hidden = false; ps.classList.add("fresh"); }
   setStep("sizes");
   document.querySelectorAll(".model").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.modell === name)));
   scrollSizesIntoView();
@@ -404,9 +427,20 @@ function pickModel(name) {
 }
 function pickSize(k) {
   choose({ rahmen: k });
+  openForm();
   setStep("form");
   renderSizes();
   scrollFormIntoView();
+}
+
+// Formular aufklappen. Tally wird erst jetzt geladen, vorher gehen keine Daten an Tally.
+function openForm() {
+  const sec = $("#anfrage");
+  if (sec.classList.contains("open")) return;
+  sec.style.minHeight = "";   // Platzhalter-Höhe aus scrollSizesIntoView, jetzt gilt 100vh aus dem CSS
+  sec.classList.add("open");
+  $("#form-hint").textContent = "Trag deinen Wunschzeitraum und deine Kontaktdaten ein und schick die Anfrage ab.";
+  loadTally();
 }
 
 /* ----- Formular vorausfüllen -----
@@ -466,7 +500,6 @@ function boot() {
     if (document.activeElement === $("#tally-form") && Date.now() - loadedAt > 2500) formTouched = true;
   }, 0); });
   $("#prefill-apply").addEventListener("click", () => { reloadForm(); $("#prefill").hidden = true; });
-  loadTally();
   initBars();
   initToTop();
 }
