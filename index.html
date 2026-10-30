@@ -78,7 +78,12 @@ h2 { margin: 0 0 0.4rem; font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 300
 .step-bar { position: absolute; top: 0; left: 0; width: 3px; height: 0; background: var(--ink); pointer-events: none; z-index: 2;
   transition: top 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), height 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), opacity 0.3s ease; opacity: 0; }
 .step-bar.on { opacity: 1; }
-@media (prefers-reduced-motion: reduce) { .step-bar { transition: none; } }
+/* Dazu eine sehr helle Fläche zwischen den Balken, die den aktuellen Bereich hinterlegt.
+   Heller als die Trennstriche (--rule) und die Größen-Kacheln (--stone), damit beide sichtbar bleiben. */
+.step-bg { position: absolute; top: 0; left: 0; width: 0; height: 0; background: #fafaf8; pointer-events: none; z-index: -1;
+  transition: top 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), height 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), left 0.7s ease, width 0.7s ease, opacity 0.3s ease; opacity: 0; }
+.step-bg.on { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .step-bar, .step-bg { transition: none; } }
 /* Nach-oben-Knopf: unten rechts, bündig mit der rechten Inhaltskante (so kommt er dem Seitenbalken nicht in die Quere). */
 .to-top {
   position: fixed; z-index: 5;
@@ -335,26 +340,37 @@ function initToTop() {
   update();
 }
 
-/* ----- Schritt-Balken ----- */
-const STEP_TARGET = { models: "#models", sizes: "#size-grid", form: ".tally-wrap" };
+/* ----- Schritt-Balken und Hinterlegung ----- */
+// Jeder Schritt reicht von der Frage (falls sichtbar) bis zum Ende der Auswahl.
+const STEP_AREA = {
+  models: ["#prompt-model", "#models"],
+  sizes: ["#prompt-size", "#size-grid"],
+  form: [".tally-wrap", ".tally-wrap"],
+};
+const PAD_TOP = 12, PAD_BOTTOM = 20;   // Luft über und unter dem Bereich
 let step = "models";
 const bars = [el("div", { class: "step-bar", "aria-hidden": "true" }), el("div", { class: "step-bar", "aria-hidden": "true" })];
+const stepBg = el("div", { class: "step-bg", "aria-hidden": "true" });
 function placeBars() {
-  const t = $(STEP_TARGET[step]).getBoundingClientRect();
+  const [fromSel, toSel] = STEP_AREA[step];
+  const from = $(fromSel).hidden ? $(toSel) : $(fromSel);
+  const top = from.getBoundingClientRect().top + window.scrollY - PAD_TOP;
+  const h = $(toSel).getBoundingClientRect().bottom + window.scrollY + PAD_BOTTOM - top;
   const w = $("main").getBoundingClientRect();
   const vw = document.documentElement.clientWidth;
-  const top = t.top + window.scrollY, h = t.height;
   // Mittig im Seitenrand neben dem Inhalt, aber nie außerhalb des Bildschirms.
   const gapL = w.left, gapR = vw - w.right;
   const xL = Math.max(4, Math.round(gapL / 2 - 1.5));
   const xR = Math.min(vw - 7, Math.round(w.right + gapR / 2 - 1.5));
   [[bars[0], xL], [bars[1], xR]].forEach(([b, x]) => { b.style.top = top + "px"; b.style.height = h + "px"; b.style.left = x + "px"; b.classList.add("on"); });
+  Object.assign(stepBg.style, { top: top + "px", height: h + "px", left: xL + "px", width: (xR + 3 - xL) + "px" });
+  stepBg.classList.add("on");
 }
 function setStep(s) { step = s; placeBars(); }
 function initBars() {
-  bars.forEach((b) => document.body.append(b));
+  document.body.append(stepBg, ...bars);
   const ro = new ResizeObserver(() => placeBars());
-  Object.values(STEP_TARGET).forEach((sel) => ro.observe($(sel)));
+  Object.values(STEP_AREA).flat().forEach((sel) => ro.observe($(sel)));
   ro.observe(document.body);
   window.addEventListener("resize", placeBars);
   if (document.fonts) document.fonts.ready.then(placeBars);
