@@ -161,9 +161,11 @@ h2 { margin: 0 0 0.4rem; font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 300
 .size-card .r { font-size: 0.95rem; font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) { .pic img, .pic svg { transition: none; } }
 
-.colors { display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; margin-top: 2.5rem; }
-.color { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; }
-.swatch { width: 1rem; height: 1rem; border-radius: 50%; background: var(--sw); border: 1px solid var(--rule); flex: none; }
+/* Farbsatz: „Die Farben ● Ice Blue, ● Pure White … werden … vergeben.“ Punkte stehen im Fließtext. */
+.colors { margin: 2.5rem 0 0; font-size: 0.95rem; line-height: 1.9; }
+.color { white-space: nowrap; }
+.colors .swatch { display: inline-block; vertical-align: -0.08em; margin-right: 0.35rem; }
+.swatch { width: 0.85rem; height: 0.85rem; border-radius: 50%; background: var(--sw); border: 1px solid var(--rule); flex: none; }
 .small { font-size: 0.8rem; color: var(--ink-soft); margin: 1rem 0 0; }
 .small + .small { margin-top: 0.4rem; }
 
@@ -240,8 +242,8 @@ footer a { color: var(--ink-soft); }
       <span class="hint" id="hint-model">Tippe auf eines der drei Räder.</span>
     </p>
     <div class="models" id="models"></div>
-    <div class="colors" id="colors" aria-label="Verfügbare Farben"></div>
-    <p class="small">Die Bilder sind Beispielbilder. Die genaue Ausstattung kann abweichen. Die Farbe deines Rads wird je nach Verfügbarkeit zufällig vergeben.</p>
+    <p class="colors" id="colors"></p>
+    <p class="small">Die Bilder sind Beispielbilder. Die genaue Ausstattung kann abweichen.</p>
     <p class="small">Du kannst bis zu vier Räder in einer Anfrage zusammenstellen, auch verschiedene Modelle.</p>
   </section>
 
@@ -378,8 +380,14 @@ function renderModels() {
       el("span", { class: "btn ghost", "aria-hidden": "true", text: "Dieses Modell wählen" })
     );
   }));
-  $("#colors").replaceChildren(el("span", { class: "eyebrow", text: "Farben" }),
-    ...FARBEN.map((f) => el("span", { class: "color" }, el("span", { class: "swatch", style: `--sw:${f.hex}`, "aria-hidden": "true" }), f.name)));
+  // „Die Farben ● A, ● B, ● C und ● D werden je nach Verfügbarkeit zufällig vergeben.“
+  const farbe = (f) => el("span", { class: "color" }, el("span", { class: "swatch", style: `--sw:${f.hex}`, "aria-hidden": "true" }), f.name);
+  const teile = [];
+  FARBEN.forEach((f, i) => {
+    if (i > 0) teile.push(i === FARBEN.length - 1 ? " und " : ", ");
+    teile.push(farbe(f));
+  });
+  $("#colors").replaceChildren("Die Farben ", ...teile, " werden je nach Verfügbarkeit zufällig vergeben.");
 }
 
 function renderSizes() {
