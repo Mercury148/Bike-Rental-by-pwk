@@ -178,6 +178,27 @@ h2 { margin: 0 0 0.4rem; font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 300
 @media (prefers-reduced-motion: reduce) { .tally-wrap { transition: none; } }
 .prefill { max-width: 46rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 1rem; padding: 0.9rem 1.1rem; margin-bottom: 1rem; background: var(--stone); font-size: 0.95rem; }
 .prefill .btn { min-height: 40px; padding: 0.4rem 1rem; }
+/* „Deine Räder“: Liste der zusammengestellten Räder über dem Formular, bis zu 4. */
+.cart { max-width: 46rem; margin: 0 0 1.25rem; border-top: 1px solid var(--ink); }
+.cart-list { list-style: none; margin: 0; padding: 0; }
+.cart-row { display: grid; grid-template-columns: 4.2rem minmax(0, 1fr) auto auto; align-items: center; gap: 0.25rem 0.75rem;
+  padding: 0.75rem 0; border-bottom: 1px solid var(--rule); }
+.cart-row .no { font: 500 0.72rem/1 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase; }
+.cart-row .what { font-size: 0.98rem; }
+.cart-row .what .sub { color: var(--ink-soft); white-space: nowrap; }
+.cart-row .open { color: var(--ink-soft); font-style: italic; }
+.cart-row.editing .no { background: var(--ink); color: var(--paper); padding: 0.3rem 0.45rem; justify-self: start; }
+.cart-act { background: none; border: 0; padding: 0.4rem 0.2rem; min-height: 40px; cursor: pointer; color: var(--ink);
+  font: 600 0.72rem/1 var(--font-sans); letter-spacing: 0.12em; text-transform: uppercase; text-decoration: underline; text-underline-offset: 3px; }
+.cart-act.x { text-decoration: none; font-size: 1rem; letter-spacing: 0; width: 40px; }
+.cart-act:hover { color: var(--ink-soft); }
+.cart-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; padding-top: 0.9rem; }
+.cart-foot .btn { min-height: 44px; padding: 0.5rem 1.1rem; }
+.cart-foot .note { font-size: 0.85rem; color: var(--ink-soft); }
+@media (max-width: 34rem) {
+  .cart-row { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .cart-row .no { grid-column: 1 / -1; justify-self: start; }
+}
 .tally-wrap iframe { display: block; width: 100%; border: 0; }
 /* Felder (Größenrechner) */
 label.f { display: grid; gap: 0.35rem; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); }
@@ -215,13 +236,13 @@ footer a { color: var(--ink-soft); }
     <p class="step-prompt active" id="prompt-model">
       <span class="step-no">Schritt 1</span>
       <span class="arrow" aria-hidden="true">↓</span>
-      <span class="q">Welches Modell möchtest du ausleihen?</span>
-      <span class="hint">Tippe auf eines der drei Räder.</span>
+      <span class="q" id="q-model">Welches Modell möchtest du ausleihen?</span>
+      <span class="hint" id="hint-model">Tippe auf eines der drei Räder.</span>
     </p>
     <div class="models" id="models"></div>
     <div class="colors" id="colors" aria-label="Verfügbare Farben"></div>
     <p class="small">Die Bilder sind Beispielbilder. Die genaue Ausstattung kann abweichen. Die Farbe deines Rads wird je nach Verfügbarkeit zufällig vergeben.</p>
-    <p class="small">Pro Anfrage kann nur ein Rad angefragt werden. Möchtest du ein zweites Rad ausleihen, schreib das bitte mit der gewünschten Rahmengröße (und dem Modell, falls es ein anderes sein soll) in das Nachrichtenfeld am Ende des Formulars.</p>
+    <p class="small">Du kannst bis zu vier Räder in einer Anfrage zusammenstellen, auch verschiedene Modelle.</p>
   </section>
 
   <section id="groessen" aria-labelledby="h-groessen">
@@ -230,8 +251,8 @@ footer a { color: var(--ink-soft); }
     <p class="step-prompt" id="prompt-size">
       <span class="step-no">Schritt 2</span>
       <span class="arrow" aria-hidden="true">↓</span>
-      <span class="q">Welche Größe passt dir?</span>
-      <span class="hint">Tippe auf deine Größe, dann geht es weiter zur Anfrage.</span>
+      <span class="q" id="q-size">Welche Größe passt dir?</span>
+      <span class="hint" id="hint-size">Tippe auf deine Größe, dann geht es weiter zur Anfrage.</span>
     </p>
     <div class="size-grid" id="size-grid" role="group" aria-label="Rahmengröße"></div>
   </section>
@@ -240,16 +261,23 @@ footer a { color: var(--ink-soft); }
     <h2 id="h-anfrage">Reservierung anfragen</h2>
     <p class="lead">Schick uns deinen Wunschzeitraum. Wir prüfen die Verfügbarkeit und melden uns zur Bestätigung. Die Anfrage ist unverbindlich.</p>
 
-    <div id="prefill" class="prefill" hidden aria-live="polite">
-      <span id="prefill-text"></span>
-      <button id="prefill-apply" class="btn ghost" type="button" hidden>Ins Formular übernehmen</button>
-    </div>
     <p class="step-prompt" id="prompt-form">
       <span class="step-no">Schritt 3</span>
       <span class="arrow" aria-hidden="true">↓</span>
       <span class="q">Deine Anfrage</span>
       <span class="hint" id="form-hint">Wähle zuerst Modell und Größe, dann öffnet sich hier das Formular.</span>
     </p>
+    <div id="cart" class="cart" hidden aria-label="Deine Räder">
+      <ol class="cart-list" id="cart-list"></ol>
+      <div class="cart-foot">
+        <button id="cart-add" class="btn ghost" type="button">+ Weiteres Rad hinzufügen</button>
+        <span class="note" id="cart-note"></span>
+      </div>
+    </div>
+    <div id="prefill" class="prefill" hidden aria-live="polite">
+      <span id="prefill-text"></span>
+      <button id="prefill-apply" class="btn ghost" type="button" hidden>Ins Formular übernehmen</button>
+    </div>
     <div class="tally-wrap"><div class="tally-inner">
       <iframe id="tally-form" data-tally-src="https://tally.so/embed/0VVqqQ?alignLeft=1&amp;hideTitle=1&amp;transparentBackground=1&amp;dynamicHeight=1" loading="lazy" width="100%" height="1600" frameborder="0" marginheight="0" marginwidth="0" title="Reservierung anfragen"></iframe>
     </div></div>
@@ -357,7 +385,7 @@ function renderModels() {
 function renderSizes() {
   $("#size-grid").replaceChildren(...Object.entries(RAHMEN_GROESSEN).map(([k, [a, z]]) =>
     el("button", {
-      class: "size-card", type: "button", "aria-pressed": String(wahl.rahmen === k),
+      class: "size-card", type: "button", "aria-pressed": String(aktuell().rahmen === k),
       "aria-label": `Rahmengröße ${k} für ${a} bis ${z} cm wählen`, onclick: () => pickSize(k),
     }, el("span", { class: "k", text: k }), el("span", { class: "r", text: `${a}–${z} cm` }))));
 }
@@ -380,21 +408,21 @@ function initToTop() {
 /* ----- Formular zurücksetzen: alles auf Anfang ----- */
 let resetBtn;
 function updateResetBtn() {
-  const show = Boolean(wahl.modell || wahl.rahmen);
+  const show = raeder.some((r) => r.modell || r.rahmen);
   resetBtn.classList.toggle("show", show);
   resetBtn.tabIndex = show ? 0 : -1;
 }
 function resetAll() {
   if (formTouched && !confirm("Deine Eingaben im Formular gehen dabei verloren. Trotzdem zurücksetzen?")) return;
-  wahl.modell = ""; wahl.rahmen = "";
+  raeder = [leer()]; cur = 0;
   formTouched = false;
-  document.querySelectorAll(".model").forEach((c) => c.setAttribute("aria-pressed", "false"));
-  renderSizes();
+  syncTiles(); renderCart();
   // Formular einklappen und das iframe durch ein frisches ersetzen (Tally lädt erst wieder nach der Größenwahl).
   const old = $("#tally-form");
   const f = old.cloneNode(false);
   f.removeAttribute("src");
   f.dataset.tallySrc = TALLY_BASE;
+  shownUrl = TALLY_BASE;
   old.replaceWith(f);
   bindIframe(f);
   const sec = $("#anfrage");
@@ -417,7 +445,7 @@ function initReset() {
 const STEP_AREA = {
   models: ["#prompt-model", "#models"],
   sizes: ["#prompt-size", "#size-grid"],
-  form: ["#prompt-form", ".tally-wrap"],
+  form: ["#prompt-form", ".tally-wrap"],   // inklusive „Deine Räder“ dazwischen
 };
 const PAD_TOP = 12, PAD_BOTTOM = 20;   // Luft über und unter dem Bereich
 let step = "models";
@@ -471,21 +499,100 @@ function scrollSizesIntoView() {
 }
 // Nach der Größenwahl: Trennstrich über „Reservierung anfragen“ an den oberen Bildschirmrand.
 const scrollFormIntoView = () => scrollToY(lineY($("#anfrage")));
+const scrollModelsIntoView = () => scrollToY(lineY($("#modelle")));
 function pickModel(name) {
-  choose({ modell: name });
+  const warFertig = fertig(aktuell());
+  aktuell().modell = name;
+  changed();
+  if (!warFertig && aktuell().rahmen) {   // Größe stand schon fest: direkt weiter zum Formular
+    openForm();
+    setStep("form");
+    scrollFormIntoView();
+    return;
+  }
   setStep("sizes");
-  document.querySelectorAll(".model").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.modell === name)));
-  updateResetBtn();
   scrollSizesIntoView();
   setTimeout(() => $("#size-grid .size-card").focus({ preventScroll: true }), 350);
 }
 function pickSize(k) {
-  choose({ rahmen: k });
+  aktuell().rahmen = k;
+  changed();
+  if (!aktuell().modell) {   // Größe zuerst gewählt: erst noch das Modell
+    setStep("models");
+    scrollModelsIntoView();
+    return;
+  }
   openForm();
-  updateResetBtn();
   setStep("form");
-  renderSizes();
   scrollFormIntoView();
+}
+
+/* ----- Mehrere Räder („Deine Räder“) ----- */
+const MAX_RAEDER = 4;
+const leer = () => ({ modell: "", rahmen: "" });
+let raeder = [leer()];   // zusammengestellte Räder
+let cur = 0;             // das Rad, das die Kacheln gerade bearbeiten
+const aktuell = () => raeder[cur];
+const fertig = (r) => Boolean(r.modell && r.rahmen);
+
+// Kacheln, Fragen, Liste, Knopf und Formular an den aktuellen Stand anpassen.
+function changed() {
+  syncTiles();
+  renderCart();
+  updateResetBtn();
+  commit();
+}
+function syncTiles() {
+  document.querySelectorAll(".model").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.modell === aktuell().modell)));
+  renderSizes();
+  // Ab dem zweiten Rad nennen die Fragen die Nummer des Rads.
+  const mehrere = raeder.length > 1, n = cur + 1;
+  $("#q-model").textContent = mehrere ? `Welches Modell für Rad ${n}?` : "Welches Modell möchtest du ausleihen?";
+  $("#q-size").textContent = mehrere ? `Welche Größe für Rad ${n}?` : "Welche Größe passt dir?";
+  $("#hint-size").textContent = mehrere
+    ? `Richte dich nach der Körpergröße der Person, die Rad ${n} fährt.`
+    : "Tippe auf deine Größe, dann geht es weiter zur Anfrage.";
+}
+function renderCart() {
+  const box = $("#cart");
+  box.hidden = !raeder.some(fertig) && raeder.length === 1;
+  $("#cart-list").replaceChildren(...raeder.map((r, i) => {
+    const what = fertig(r)
+      ? el("span", { class: "what" }, r.modell, el("span", { class: "sub", text: ` · ${rahmenLabel(r.rahmen)}` }))
+      : el("span", { class: "what open", text: r.modell ? `${r.modell} · Größe noch offen` : r.rahmen ? `Rahmen ${r.rahmen} · Modell noch offen` : "Modell und Größe noch offen" });
+    const row = el("li", { class: "cart-row" + (i === cur && !fertig(r) ? " editing" : "") },
+      el("span", { class: "no", text: `Rad ${i + 1}` }), what,
+      el("button", { class: "cart-act", type: "button", text: "Ändern", "aria-label": `Rad ${i + 1} ändern`, onclick: () => editRad(i) }));
+    if (raeder.length > 1) row.append(el("button", { class: "cart-act x", type: "button", text: "✕", "aria-label": `Rad ${i + 1} entfernen`, onclick: () => removeRad(i) }));
+    else row.append(el("span"));
+    return row;
+  }));
+  const offen = raeder.some((r) => !fertig(r));
+  const voll = raeder.length >= MAX_RAEDER;
+  $("#cart-add").hidden = voll || offen;
+  $("#cart-note").textContent = voll ? "Mehr als vier Räder? Schreib uns das gern in die Nachricht."
+    : offen ? "Wähle für das offene Rad oben noch Modell und Größe." : `Bis zu ${MAX_RAEDER} Räder pro Anfrage.`;
+}
+function addRad() {
+  if (raeder.length >= MAX_RAEDER) return;
+  raeder.push(leer()); cur = raeder.length - 1;
+  changed();
+  setStep("models");
+  scrollModelsIntoView();
+}
+function editRad(i) {
+  cur = i;
+  changed();
+  setStep("models");
+  scrollModelsIntoView();
+}
+function removeRad(i) {
+  raeder.splice(i, 1);
+  if (cur > i || cur >= raeder.length) cur = Math.max(0, cur - 1);
+  // Bearbeitet man gerade kein offenes Rad mehr, zeigen die Kacheln das letzte Rad.
+  if (fertig(aktuell())) cur = raeder.length - 1;
+  changed();
+  placeBars();
 }
 
 const FORM_HINT_CLOSED = "Wähle zuerst Modell und Größe, dann öffnet sich hier das Formular.";
@@ -505,33 +612,34 @@ function openForm() {
    Der Wert muss exakt dem Text der Auswahl im Tally-Formular entsprechen. */
 const TALLY_BASE = "https://tally.so/embed/0VVqqQ?alignLeft=1&hideTitle=1&transparentBackground=1&dynamicHeight=1";
 const rahmenLabel = (k) => k && RAHMEN_GROESSEN[k] ? `${k} · ${RAHMEN_GROESSEN[k][0]}–${RAHMEN_GROESSEN[k][1]} cm` : "";
-const wahl = { modell: "", rahmen: "" };
-let formTouched = false;   // hat jemand schon im Formular getippt? Dann nicht ungefragt neu laden.
+let formTouched = false;
+let shownUrl = TALLY_BASE;   // Adresse, mit der das Formular gerade geladen ist (oder gleich geladen wird)   // hat jemand schon im Formular getippt? Dann nicht ungefragt neu laden.
 
+// Nur fertige Räder gehen ans Formular, lückenlos nummeriert: modell/rahmen für Rad 1, modell2/rahmen2 für Rad 2 usw.
 function tallyUrl() {
   // encodeURIComponent statt URLSearchParams: Leerzeichen als %20, nicht als „+“.
   const q = [];
-  if (wahl.modell) q.push("modell=" + encodeURIComponent(wahl.modell));
-  if (wahl.rahmen) q.push("rahmen=" + encodeURIComponent(rahmenLabel(wahl.rahmen)));
-  const extra = q.join("&");
-  return extra ? `${TALLY_BASE}&${extra}` : TALLY_BASE;
+  const liste = raeder.filter(fertig);
+  liste.forEach((r, i) => {
+    const n = i === 0 ? "" : String(i + 1);
+    q.push(`modell${n}=` + encodeURIComponent(r.modell), `rahmen${n}=` + encodeURIComponent(rahmenLabel(r.rahmen)));
+  });
+  if (liste.length) q.push("anzahl=" + liste.length);
+  return q.length ? `${TALLY_BASE}&${q.join("&")}` : TALLY_BASE;
 }
 function reloadForm() {
   const f = $("#tally-form");
-  f.dataset.tallySrc = tallyUrl();
+  f.dataset.tallySrc = shownUrl = tallyUrl();
   if (f.getAttribute("src")) f.src = f.dataset.tallySrc;   // sonst lädt loadTally() es mit der neuen Adresse
   formTouched = false;
   $("#prefill-apply").hidden = true;
 }
 // Das Formular zeigt die Auswahl selbst an („Deine Auswahl: …“). Der Hinweis auf der Seite erscheint
 // nur, wenn schon ins Formular getippt wurde und eine neue Auswahl erst übernommen werden muss.
-function choose(change) {
-  const before = tallyUrl();
-  Object.assign(wahl, change);
-  if (tallyUrl() === before) return;
-  const parts = [wahl.modell, wahl.rahmen && `Rahmengröße ${wahl.rahmen}`].filter(Boolean);
+function commit() {
+  if (tallyUrl() === shownUrl) { $("#prefill").hidden = true; return; }
   if (formTouched) {
-    $("#prefill-text").textContent = `Neue Auswahl: ${parts.join(" · ")}. Beim Übernehmen werden deine bisherigen Eingaben im Formular zurückgesetzt.`;
+    $("#prefill-text").textContent = "Deine Räder haben sich geändert. Beim Übernehmen werden deine bisherigen Eingaben im Formular zurückgesetzt.";
     $("#prefill").hidden = false;
     $("#prefill-apply").hidden = false;   // nicht ungefragt neu laden, sonst gehen Eingaben verloren
   } else {
@@ -559,6 +667,7 @@ function boot() {
     if (document.activeElement === $("#tally-form") && Date.now() - loadedAt > 2500) formTouched = true;
   }, 0); });
   $("#prefill-apply").addEventListener("click", () => { reloadForm(); $("#prefill").hidden = true; });
+  $("#cart-add").addEventListener("click", addRad);
   initBars();
   initToTop();
   initReset();
